@@ -99,7 +99,8 @@ func (t *TitleScene) Update(data *gamestatus.GameData) {
 		if isMove(data.UserAction) {
 			nextX, nextY := getNextPosition(t.currentPlayerPosition.X, t.currentPlayerPosition.Y, data.UserAction)
 			key := util.MapPosition{X: nextX, Y: nextY}
-			if t.movableMap[key] {
+			movable := t.movableMap[key] && !t.existsMobCharacter(nextX, nextY)
+			if movable {
 				t.nextPlayerPosition = util.MapPosition{
 					X: nextX,
 					Y: nextY,
@@ -187,4 +188,13 @@ func getNextPosition(currentX, currentY int, userAction gamestatus.UserAction) (
 		nextY = TITLE_MAP_ROWS - 1
 	}
 	return nextX, nextY
+}
+
+func (t *TitleScene) existsMobCharacter(x, y int) bool {
+	for _, m := range t.mobs {
+		if m.Position.X == x && m.Position.Y == y {
+			return true
+		}
+	}
+	return false
 }
