@@ -18,6 +18,9 @@ var (
 	//go:embed player.png
 	Player_png []byte
 
+	//go:embed black_cat.png
+	BlackCat_png []byte
+
 	//go:embed title_map_image.png
 	TitleMapImage []byte
 

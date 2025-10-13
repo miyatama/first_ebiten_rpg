@@ -4,6 +4,7 @@ import (
 	"first_rpg/miyatama/assets/images"
 	maps "first_rpg/miyatama/assets/maps"
 	gamestatus "first_rpg/miyatama/game_status"
+	"first_rpg/miyatama/util"
 	"log/slog"
 
 	"github.com/hajimehoshi/ebiten/v2"
@@ -30,18 +31,14 @@ const (
 type TitleScene struct {
 	player                *Player
 	mapImage              *ebiten.Image
-	movableMap            map[maps.MovableKey]bool
-	currentPlayerPosition PlayerPosition
-	nextPlayerPosition    PlayerPosition
+	movableMap            map[util.MapPosition]bool
+	currentPlayerPosition util.MapPosition
+	nextPlayerPosition    util.MapPosition
 	beforeImageDrawX      int
 	beforeImageDrawY      int
 	sceneStatus           TitleSceneStatus
 	movingFrame           int
-}
-
-type PlayerPosition struct {
-	X int
-	Y int
+	mobs                  []*MobCharacter
 }
 
 func (t *TitleScene) Init() error {
@@ -67,9 +64,31 @@ func (t *TitleScene) Init() error {
 	}
 
 	// プレイヤー初期位置
-	t.currentPlayerPosition = PlayerPosition{
+	t.currentPlayerPosition = util.MapPosition{
 		X: 24,
 		Y: 21,
+	}
+
+	// モブキャラクター
+	t.mobs = []*MobCharacter{}
+	t.mobs = append(t.mobs, &MobCharacter{
+		MobType: MOB_TYPE_BLACK_CAT,
+		Position: util.MapPosition{
+			X: 39,
+			Y: 5,
+		},
+		Direction: util.DIRECTION_DOWN,
+	})
+	t.mobs = append(t.mobs, &MobCharacter{
+		MobType: MOB_TYPE_BLACK_CAT,
+		Position: util.MapPosition{
+			X: 24,
+			Y: 20,
+		},
+		Direction: util.DIRECTION_DOWN,
+	})
+	for _, m := range t.mobs {
+		m.Init()
 	}
 	return nil
 }
@@ -79,9 +98,9 @@ func (t *TitleScene) Update(data *gamestatus.GameData) {
 	if t.sceneStatus == IDLE {
 		if isMove(data.UserAction) {
 			nextX, nextY := getNextPosition(t.currentPlayerPosition.X, t.currentPlayerPosition.Y, data.UserAction)
-			key := maps.MovableKey{X: nextX, Y: nextY}
+			key := util.MapPosition{X: nextX, Y: nextY}
 			if t.movableMap[key] {
-				t.nextPlayerPosition = PlayerPosition{
+				t.nextPlayerPosition = util.MapPosition{
 					X: nextX,
 					Y: nextY,
 				}
@@ -90,10 +109,14 @@ func (t *TitleScene) Update(data *gamestatus.GameData) {
 			}
 		}
 	}
+	for _, m := range t.mobs {
+		m.Update(data)
+	}
 	t.player.Update(data)
 }
 
 func (t *TitleScene) Draw(screen *ebiten.Image, data *gamestatus.GameData) {
+	// マップの描画
 	mapSx := (t.currentPlayerPosition.X*images.MAP_TILE_WIDTH + images.MAP_TILE_WIDTH/2)
 	mapSy := (t.currentPlayerPosition.Y*images.MAP_TILE_WIDTH + images.MAP_TILE_WIDTH/2)
 	// 移動中のフレーム判定
@@ -114,6 +137,12 @@ func (t *TitleScene) Draw(screen *ebiten.Image, data *gamestatus.GameData) {
 	op.GeoM.Translate(-float64(mapSx), -float64(mapSy))
 	op.GeoM.Translate(float64(data.LayoutWidth)/2, float64(data.LayoutHeight)/2)
 	screen.DrawImage(t.mapImage, op)
+
+	// モブの描画
+	for _, m := range t.mobs {
+		m.SetDrawCorrection(mapSx, mapSy)
+		m.Draw(screen, data)
+	}
 
 	if t.beforeImageDrawX != mapSx || t.beforeImageDrawY != mapSy {
 		t.beforeImageDrawX = mapSx
