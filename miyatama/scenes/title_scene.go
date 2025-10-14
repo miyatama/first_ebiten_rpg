@@ -1,6 +1,8 @@
 package scenes
 
 import (
+	"bytes"
+	miyatamaAudio "first_rpg/miyatama/assets/audio"
 	"first_rpg/miyatama/assets/events"
 	"first_rpg/miyatama/assets/images"
 	maps "first_rpg/miyatama/assets/maps"
@@ -9,6 +11,8 @@ import (
 	"log/slog"
 
 	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/hajimehoshi/ebiten/v2/audio"
+	"github.com/hajimehoshi/ebiten/v2/audio/mp3"
 )
 
 const (
@@ -31,6 +35,7 @@ const (
 * mapParts 描画で利用するマップのパーツ
 **/
 type TitleScene struct {
+	gameStateMsg          gamestatus.GameStateMsg
 	player                *Player
 	talkPanel             *TalkPanel
 	mapImage              *ebiten.Image
@@ -43,9 +48,13 @@ type TitleScene struct {
 	movingFrame           int
 	mobs                  []*MobCharacter
 	events                []*events.Event
+	// Audio
+	audioContext *audio.Context
+	audioPlayer  *audio.Player
 }
 
 func (t *TitleScene) Init() error {
+	t.gameStateMsg = gamestatus.GAME_STATE_MSG_NONE
 	t.player = &Player{}
 	if err := t.player.Init(); err != nil {
 		return err
@@ -87,6 +96,20 @@ func (t *TitleScene) Init() error {
 	// トーク用パネル
 	t.talkPanel = &TalkPanel{}
 	t.talkPanel.Init()
+
+	// BGM
+	audioContext := audio.NewContext(miyatamaAudio.DEFAULT_SAMPLE_RATE)
+	t.audioContext = audioContext
+	audioStream, err := mp3.DecodeF32(bytes.NewReader(miyatamaAudio.Ragtime_mp3))
+	if err != nil {
+		return err
+	}
+	audioPlayer, err := audioContext.NewPlayerF32(audioStream)
+	if err != nil {
+		return err
+	}
+	t.audioPlayer = audioPlayer
+	t.audioPlayer.Play()
 	return nil
 }
 
@@ -161,6 +184,10 @@ func (t *TitleScene) Draw(screen *ebiten.Image, data *gamestatus.GameData) {
 	}
 }
 
+func (t *TitleScene) Msg() gamestatus.GameStateMsg {
+	return t.gameStateMsg
+}
+
 func (t *TitleScene) movePlayer(data *gamestatus.GameData) bool {
 	if !isInputDirection(data.UserAction) {
 		return false
@@ -177,6 +204,7 @@ func (t *TitleScene) movePlayer(data *gamestatus.GameData) bool {
 		}
 		t.sceneStatus = MOVING
 		t.movingFrame = 0
+		t.player.SetUserAction(data.UserAction)
 		return true
 	} else {
 		return false
@@ -192,7 +220,7 @@ func (t *TitleScene) actionMobCharacter(data *gamestatus.GameData) bool {
 	nextX, nextY := getNextPosition(t.currentPlayerPosition.X, t.currentPlayerPosition.Y, data.UserAction)
 	existsMobCharacter, mobIndex := t.existsMobCharacter(nextX, nextY)
 	if existsMobCharacter {
-		// プレイヤ方向を変更
+		t.player.SetUserAction(data.UserAction)
 		t.sceneStatus = TALK_MOB
 		eventId := t.mobs[mobIndex].EventId
 		for _, e := range t.events {
@@ -277,6 +305,24 @@ func generateMobCharacter() []*MobCharacter {
 			Direction: util.DIRECTION_DOWN,
 			EventId:   0,
 		},
+		&MobCharacter{
+			MobType: MOB_TYPE_NONE,
+			Position: util.MapPosition{
+				X: 44,
+				Y: 24,
+			},
+			Direction: util.DIRECTION_DOWN,
+			EventId:   1,
+		},
+		&MobCharacter{
+			MobType: MOB_TYPE_VILLAGE_BOY,
+			Position: util.MapPosition{
+				X: 44,
+				Y: 23,
+			},
+			Direction: util.DIRECTION_DOWN,
+			EventId:   1,
+		},
 	}
 }
 
@@ -286,6 +332,11 @@ func generateEvents() []*events.Event {
 			Id:        0,
 			EventType: events.EVENT_TYPE_MOB_TALK,
 			TalkTexts: []string{"シャー！"},
+		},
+		&events.Event{
+			Id:        1,
+			EventType: events.EVENT_TYPE_RESTAULANT,
+			TalkTexts: []string{"いらっしゃい、なににしますか？"},
 		},
 	}
 }

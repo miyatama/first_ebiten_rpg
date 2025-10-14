@@ -15,7 +15,9 @@ import (
 type MobType int
 
 const (
-	MOB_TYPE_BLACK_CAT MobType = iota
+	MOB_TYPE_NONE MobType = iota
+	MOB_TYPE_BLACK_CAT
+	MOB_TYPE_VILLAGE_BOY
 )
 
 type MobCharacter struct {
@@ -32,24 +34,27 @@ type MobCharacter struct {
 }
 
 func (m *MobCharacter) Init() error {
-	img, _, err := image.Decode(bytes.NewReader(m.getImageBytes()))
-	if err != nil {
-		slog.Error("player.png decode error")
-		slog.String("error: {}", err.Error())
-		return err
-	}
-	characterImages := ebiten.NewImageFromImage(img)
-	m.characterImages = [][]*ebiten.Image{}
-	for i := 0; i < 4; i++ {
-		progressImages := []*ebiten.Image{}
-		for j := 0; j < 3; j++ {
-			left := j * util.CHARACTER_IMG_WIDTH
-			top := i * util.CHARACTER_IMG_HEIGTH
-			right := left + util.CHARACTER_IMG_WIDTH - 1
-			bottom := top + util.CHARACTER_IMG_HEIGTH - 1
-			progressImages = append(progressImages, characterImages.SubImage(image.Rect(left, top, right, bottom)).(*ebiten.Image))
+	imageBytes := m.getImageBytes()
+	if len(imageBytes) > 0 {
+		img, _, err := image.Decode(bytes.NewReader(imageBytes))
+		if err != nil {
+			slog.Error("player.png decode error")
+			slog.String("error: {}", err.Error())
+			return err
 		}
-		m.characterImages = append(m.characterImages, progressImages)
+		characterImages := ebiten.NewImageFromImage(img)
+		m.characterImages = [][]*ebiten.Image{}
+		for i := 0; i < 4; i++ {
+			progressImages := []*ebiten.Image{}
+			for j := 0; j < 3; j++ {
+				left := j * util.CHARACTER_IMG_WIDTH
+				top := i * util.CHARACTER_IMG_HEIGTH
+				right := left + util.CHARACTER_IMG_WIDTH - 1
+				bottom := top + util.CHARACTER_IMG_HEIGTH - 1
+				progressImages = append(progressImages, characterImages.SubImage(image.Rect(left, top, right, bottom)).(*ebiten.Image))
+			}
+			m.characterImages = append(m.characterImages, progressImages)
+		}
 	}
 	return nil
 }
@@ -67,6 +72,9 @@ func (m *MobCharacter) SetDrawCorrection(sx, sy int) {
 }
 
 func (m *MobCharacter) Draw(screen *ebiten.Image, data *gamestatus.GameData) {
+	if m.MobType == MOB_TYPE_NONE {
+		return
+	}
 	progressIndex := m.frame / util.CHARACTER_ANIMATION_SPAN
 	if progressIndex >= 3 {
 		progressIndex = 2
@@ -104,6 +112,8 @@ func (m *MobCharacter) getImageBytes() []byte {
 	switch m.MobType {
 	case MOB_TYPE_BLACK_CAT:
 		return images.BlackCat_png
+	case MOB_TYPE_VILLAGE_BOY:
+		return images.VillageBoy_png
 	}
 	return []byte{}
 }

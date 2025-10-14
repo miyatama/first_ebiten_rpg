@@ -21,6 +21,9 @@ var (
 	//go:embed black_cat.png
 	BlackCat_png []byte
 
+	//go:embed village_boy.png
+	VillageBoy_png []byte
+
 	//go:embed title_map_image.png
 	TitleMapImage []byte
 

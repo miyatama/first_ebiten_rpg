@@ -43,17 +43,6 @@ func (p *Player) Init() error {
 }
 
 func (p *Player) Update(data *gamestatus.GameData) {
-	// TODO イベント中は向きを変えさせない
-	switch data.UserAction {
-	case gamestatus.USER_ACTION_LEFT:
-		p.userDirection = util.DIRECTION_LEFT
-	case gamestatus.USER_ACTION_UP:
-		p.userDirection = util.DIRECTION_UP
-	case gamestatus.USER_ACTION_RIGHT:
-		p.userDirection = util.DIRECTION_RIGHT
-	case gamestatus.USER_ACTION_DOWN:
-		p.userDirection = util.DIRECTION_DOWN
-	}
 	// 状態の変更
 	p.frame++
 	if p.frame > util.CHARACTER_ANIMATION_SPAN*3 {
@@ -81,4 +70,17 @@ func (p *Player) Draw(screen *ebiten.Image, data *gamestatus.GameData) {
 	op.GeoM.Translate(-float64(util.CHARACTER_IMG_WIDTH)/2, -float64(util.CHARACTER_IMG_HEIGTH)/2)
 	op.GeoM.Translate(float64(data.LayoutWidth)/2, float64(data.LayoutHeight)/2)
 	screen.DrawImage(p.playerImages[directionIndex][progressIndex], op)
+}
+
+func (p *Player) SetUserAction(userAction gamestatus.UserAction) {
+	switch userAction {
+	case gamestatus.USER_ACTION_LEFT:
+		p.userDirection = util.DIRECTION_LEFT
+	case gamestatus.USER_ACTION_UP:
+		p.userDirection = util.DIRECTION_UP
+	case gamestatus.USER_ACTION_RIGHT:
+		p.userDirection = util.DIRECTION_RIGHT
+	case gamestatus.USER_ACTION_DOWN:
+		p.userDirection = util.DIRECTION_DOWN
+	}
 }
