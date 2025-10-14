@@ -38,6 +38,8 @@ func keyToUserAction(keys []ebiten.Key) gamestatus.UserAction {
 		return gamestatus.USER_ACTION_LEFT
 	case ebiten.KeyD:
 		return gamestatus.USER_ACTION_RIGHT
+	case ebiten.KeySpace:
+		return gamestatus.USER_ACTION_DECIDE
 	}
 	return gamestatus.USER_ACTION_NONE
 }

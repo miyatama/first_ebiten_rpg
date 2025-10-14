@@ -43,6 +43,7 @@ func (p *Player) Init() error {
 }
 
 func (p *Player) Update(data *gamestatus.GameData) {
+	// TODO イベント中は向きを変えさせない
 	switch data.UserAction {
 	case gamestatus.USER_ACTION_LEFT:
 		p.userDirection = util.DIRECTION_LEFT

@@ -1,5 +1,7 @@
 package gamestatus
 
+import "first_rpg/miyatama/assets/events"
+
 type UserAction int
 
 const (
@@ -8,6 +10,7 @@ const (
 	USER_ACTION_RIGHT
 	USER_ACTION_UP
 	USER_ACTION_DOWN
+	USER_ACTION_DECIDE
 )
 
 type GameData struct {
@@ -16,4 +19,5 @@ type GameData struct {
 	ScreenHeight int
 	LayoutWidth  int
 	LayoutHeight int
+	Event        *events.Event
 }

@@ -22,6 +22,7 @@ type MobCharacter struct {
 	MobType         MobType
 	Position        util.MapPosition
 	Direction       util.Direction
+	EventId         int
 	frame           int
 	characterImages [][]*ebiten.Image
 	savedSx         int

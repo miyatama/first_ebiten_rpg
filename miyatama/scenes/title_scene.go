@@ -1,6 +1,7 @@
 package scenes
 
 import (
+	"first_rpg/miyatama/assets/events"
 	"first_rpg/miyatama/assets/images"
 	maps "first_rpg/miyatama/assets/maps"
 	gamestatus "first_rpg/miyatama/game_status"
@@ -21,6 +22,7 @@ type TitleSceneStatus int
 const (
 	IDLE TitleSceneStatus = iota
 	MOVING
+	TALK_MOB
 )
 
 /**
@@ -30,6 +32,7 @@ const (
 **/
 type TitleScene struct {
 	player                *Player
+	talkPanel             *TalkPanel
 	mapImage              *ebiten.Image
 	movableMap            map[util.MapPosition]bool
 	currentPlayerPosition util.MapPosition
@@ -39,6 +42,7 @@ type TitleScene struct {
 	sceneStatus           TitleSceneStatus
 	movingFrame           int
 	mobs                  []*MobCharacter
+	events                []*events.Event
 }
 
 func (t *TitleScene) Init() error {
@@ -71,49 +75,49 @@ func (t *TitleScene) Init() error {
 
 	// モブキャラクター
 	t.mobs = []*MobCharacter{}
-	t.mobs = append(t.mobs, &MobCharacter{
-		MobType: MOB_TYPE_BLACK_CAT,
-		Position: util.MapPosition{
-			X: 39,
-			Y: 5,
-		},
-		Direction: util.DIRECTION_DOWN,
-	})
-	t.mobs = append(t.mobs, &MobCharacter{
-		MobType: MOB_TYPE_BLACK_CAT,
-		Position: util.MapPosition{
-			X: 24,
-			Y: 20,
-		},
-		Direction: util.DIRECTION_DOWN,
-	})
+	t.mobs = append(t.mobs, generateMobCharacter()...)
 	for _, m := range t.mobs {
 		m.Init()
 	}
+
+	// イベント
+	t.events = []*events.Event{}
+	t.events = append(t.events, generateEvents()...)
+
+	// トーク用パネル
+	t.talkPanel = &TalkPanel{}
+	t.talkPanel.Init()
 	return nil
 }
 
 func (t *TitleScene) Update(data *gamestatus.GameData) {
 	// キャラクタの移動
 	if t.sceneStatus == IDLE {
-		if isMove(data.UserAction) {
-			nextX, nextY := getNextPosition(t.currentPlayerPosition.X, t.currentPlayerPosition.Y, data.UserAction)
-			key := util.MapPosition{X: nextX, Y: nextY}
-			movable := t.movableMap[key] && !t.existsMobCharacter(nextX, nextY)
-			if movable {
-				t.nextPlayerPosition = util.MapPosition{
-					X: nextX,
-					Y: nextY,
-				}
-				t.sceneStatus = MOVING
-				t.movingFrame = 0
+		f := func() {
+			if t.movePlayer(data) {
+				return
+			}
+
+			if t.actionMobCharacter(data) {
+				return
 			}
 		}
+		f()
+	} else if t.sceneStatus == TALK_MOB {
+		f := func() {
+			// イベントを次に進める
+			if data.UserAction == gamestatus.USER_ACTION_DECIDE {
+				t.sceneStatus = IDLE
+				data.Event = nil
+			}
+		}
+		f()
 	}
 	for _, m := range t.mobs {
 		m.Update(data)
 	}
 	t.player.Update(data)
+	t.talkPanel.Update(data)
 }
 
 func (t *TitleScene) Draw(screen *ebiten.Image, data *gamestatus.GameData) {
@@ -150,9 +154,63 @@ func (t *TitleScene) Draw(screen *ebiten.Image, data *gamestatus.GameData) {
 		t.beforeImageDrawY = mapSy
 	}
 	t.player.Draw(screen, data)
+
+	// モブ会話の描画
+	if t.sceneStatus == TALK_MOB {
+		t.talkPanel.Draw(screen, data)
+	}
 }
 
-func isMove(userAction gamestatus.UserAction) bool {
+func (t *TitleScene) movePlayer(data *gamestatus.GameData) bool {
+	if !isInputDirection(data.UserAction) {
+		return false
+	}
+
+	nextX, nextY := getNextPosition(t.currentPlayerPosition.X, t.currentPlayerPosition.Y, data.UserAction)
+	key := util.MapPosition{X: nextX, Y: nextY}
+	existsMobCharacter, _ := t.existsMobCharacter(nextX, nextY)
+	movable := t.movableMap[key] && !existsMobCharacter
+	if movable {
+		t.nextPlayerPosition = util.MapPosition{
+			X: nextX,
+			Y: nextY,
+		}
+		t.sceneStatus = MOVING
+		t.movingFrame = 0
+		return true
+	} else {
+		return false
+	}
+}
+
+func (t *TitleScene) actionMobCharacter(data *gamestatus.GameData) bool {
+	if !isInputDirection(data.UserAction) {
+		return false
+	}
+
+	// 進行方向にモブが存在するか
+	nextX, nextY := getNextPosition(t.currentPlayerPosition.X, t.currentPlayerPosition.Y, data.UserAction)
+	existsMobCharacter, mobIndex := t.existsMobCharacter(nextX, nextY)
+	if existsMobCharacter {
+		// プレイヤ方向を変更
+		t.sceneStatus = TALK_MOB
+		eventId := t.mobs[mobIndex].EventId
+		for _, e := range t.events {
+			if e.Id == eventId {
+				data.Event = e
+				break
+			}
+		}
+		slog.Info("TitleScene.actionMobCharacter",
+			slog.Int("mob index", mobIndex),
+		)
+		return true
+	} else {
+		return false
+	}
+}
+
+func isInputDirection(userAction gamestatus.UserAction) bool {
 	return userAction == gamestatus.USER_ACTION_LEFT ||
 		userAction == gamestatus.USER_ACTION_RIGHT ||
 		userAction == gamestatus.USER_ACTION_UP ||
@@ -190,11 +248,44 @@ func getNextPosition(currentX, currentY int, userAction gamestatus.UserAction) (
 	return nextX, nextY
 }
 
-func (t *TitleScene) existsMobCharacter(x, y int) bool {
-	for _, m := range t.mobs {
+func (t *TitleScene) existsMobCharacter(x, y int) (bool, int) {
+	for i, m := range t.mobs {
 		if m.Position.X == x && m.Position.Y == y {
-			return true
+			return true, i
 		}
 	}
-	return false
+	return false, 0
+}
+
+func generateMobCharacter() []*MobCharacter {
+	return []*MobCharacter{
+		&MobCharacter{
+			MobType: MOB_TYPE_BLACK_CAT,
+			Position: util.MapPosition{
+				X: 39,
+				Y: 5,
+			},
+			Direction: util.DIRECTION_DOWN,
+			EventId:   0,
+		},
+		&MobCharacter{
+			MobType: MOB_TYPE_BLACK_CAT,
+			Position: util.MapPosition{
+				X: 24,
+				Y: 20,
+			},
+			Direction: util.DIRECTION_DOWN,
+			EventId:   0,
+		},
+	}
+}
+
+func generateEvents() []*events.Event {
+	return []*events.Event{
+		&events.Event{
+			Id:        0,
+			EventType: events.EVENT_TYPE_MOB_TALK,
+			TalkTexts: []string{"シャー！"},
+		},
+	}
 }
