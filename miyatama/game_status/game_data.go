@@ -14,10 +14,11 @@ const (
 )
 
 type GameData struct {
-	UserAction   UserAction
-	ScreenWidth  int
-	ScreenHeight int
-	LayoutWidth  int
-	LayoutHeight int
-	Event        *events.Event
+	UserAction      UserAction
+	ScreenWidth     int
+	ScreenHeight    int
+	LayoutWidth     int
+	LayoutHeight    int
+	Event           *events.Event
+	EventMessageSeq int
 }

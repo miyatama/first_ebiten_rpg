@@ -2,6 +2,7 @@ package scenes
 
 import (
 	"bytes"
+	"errors"
 	miyatamaAudio "first_rpg/miyatama/assets/audio"
 	"first_rpg/miyatama/assets/events"
 	"first_rpg/miyatama/assets/images"
@@ -16,9 +17,10 @@ import (
 )
 
 const (
-	TITLE_MAP_ROWS     = 50
-	TITLE_MAP_COLS     = 50
-	MOVING_FRAME_COUNT = 30
+	TITLE_MAP_ROWS              = 50
+	TITLE_MAP_COLS              = 50
+	MOVING_FRAME_COUNT          = 30
+	USER_INPUT_WAIT_FRAME_COUNT = 20
 )
 
 type TitleSceneStatus int
@@ -27,6 +29,7 @@ const (
 	IDLE TitleSceneStatus = iota
 	MOVING
 	TALK_MOB
+	STORE
 )
 
 /**
@@ -48,6 +51,9 @@ type TitleScene struct {
 	movingFrame           int
 	mobs                  []*MobCharacter
 	events                []*events.Event
+	stores                []*Store
+	storeIndex            int
+	userInputFrame        int
 	// Audio
 	audioContext *audio.Context
 	audioPlayer  *audio.Player
@@ -93,6 +99,13 @@ func (t *TitleScene) Init() error {
 	t.events = []*events.Event{}
 	t.events = append(t.events, generateEvents()...)
 
+	// ストア
+	t.stores = []*Store{}
+	t.stores = append(t.stores, generateStores()...)
+	for _, s := range t.stores {
+		s.Init()
+	}
+
 	// トーク用パネル
 	t.talkPanel = &TalkPanel{}
 	t.talkPanel.Init()
@@ -115,24 +128,65 @@ func (t *TitleScene) Init() error {
 
 func (t *TitleScene) Update(data *gamestatus.GameData) {
 	// キャラクタの移動
-	if t.sceneStatus == IDLE {
-		f := func() {
-			if t.movePlayer(data) {
-				return
-			}
+	switch t.sceneStatus {
+	case IDLE:
+		{
+			f := func() {
+				if t.movePlayer(data) {
+					return
+				}
 
-			if t.actionMobCharacter(data) {
-				return
+				if t.actionMobCharacter(data) {
+					return
+				}
 			}
+			f()
 		}
-		f()
-	} else if t.sceneStatus == TALK_MOB {
-		f := func() {
-			// イベントを次に進める
-			if data.UserAction == gamestatus.USER_ACTION_DECIDE {
-				t.sceneStatus = IDLE
-				data.Event = nil
+	case TALK_MOB:
+		{
+			f := func() {
+				// イベントを次に進める
+				if !t.allowUserInput() {
+					return
+				}
+				if data.UserAction != gamestatus.USER_ACTION_DECIDE {
+					return
+				}
+				if len(data.Event.TalkTexts) > data.EventMessageSeq+1 {
+					data.EventMessageSeq++
+					return
+				}
+				if data.Event.NextEventId <= 0 {
+					t.sceneStatus = IDLE
+					data.Event = nil
+					return
+				}
+				evevnt, _, err := t.getEvent(data.Event.NextEventId)
+				if err != nil {
+					slog.Error(err.Error(),
+						slog.Int("event id", data.Event.NextEventId),
+					)
+					return
+				}
+				data.Event = evevnt
+				if evevnt.EventType == events.EVENT_TYPE_STORE {
+					t.sceneStatus = STORE
+					_, storeIndex, err := t.getStore(evevnt.StoreId)
+					if err != nil {
+						slog.Error(err.Error(),
+							slog.Int("store id", evevnt.StoreId),
+						)
+						return
+					}
+					t.storeIndex = storeIndex
+				}
 			}
+			f()
+		}
+	case STORE:
+		f := func() {
+			// ストアのUPDATE
+			t.stores[t.storeIndex].Update(data)
 		}
 		f()
 	}
@@ -179,8 +233,18 @@ func (t *TitleScene) Draw(screen *ebiten.Image, data *gamestatus.GameData) {
 	t.player.Draw(screen, data)
 
 	// モブ会話の描画
-	if t.sceneStatus == TALK_MOB {
-		t.talkPanel.Draw(screen, data)
+	switch t.sceneStatus {
+	case TALK_MOB:
+		{
+			t.talkPanel.Draw(screen, data)
+		}
+	case STORE:
+		{
+			t.stores[t.storeIndex].Draw(screen, data)
+		}
+	}
+	if t.userInputFrame > 0 {
+		t.userInputFrame--
 	}
 }
 
@@ -226,6 +290,7 @@ func (t *TitleScene) actionMobCharacter(data *gamestatus.GameData) bool {
 		for _, e := range t.events {
 			if e.Id == eventId {
 				data.Event = e
+				data.EventMessageSeq = 0
 				break
 			}
 		}
@@ -236,6 +301,35 @@ func (t *TitleScene) actionMobCharacter(data *gamestatus.GameData) bool {
 	} else {
 		return false
 	}
+}
+
+func (t *TitleScene) allowUserInput() bool {
+	if t.userInputFrame <= 0 {
+		t.userInputFrame = USER_INPUT_WAIT_FRAME_COUNT
+		return true
+	} else {
+		return false
+	}
+}
+
+func (t *TitleScene) getEvent(id int) (*events.Event, int, error) {
+	for i, e := range t.events {
+		if e.Id == id {
+			return e, i, nil
+		}
+	}
+	return &events.Event{}, -1, errors.New("event not found")
+
+}
+
+func (t *TitleScene) getStore(id int) (*Store, int, error) {
+	for i, s := range t.stores {
+		if s.Id == id {
+			return s, i, nil
+		}
+	}
+	return &Store{}, -1, errors.New("store not found")
+
 }
 
 func isInputDirection(userAction gamestatus.UserAction) bool {
@@ -329,14 +423,36 @@ func generateMobCharacter() []*MobCharacter {
 func generateEvents() []*events.Event {
 	return []*events.Event{
 		&events.Event{
-			Id:        0,
-			EventType: events.EVENT_TYPE_MOB_TALK,
-			TalkTexts: []string{"シャー！"},
+			Id:          0,
+			EventType:   events.EVENT_TYPE_MOB_TALK,
+			TalkTexts:   []string{"シャー！"},
+			NextEventId: -1,
+			StoreId:     -1,
 		},
 		&events.Event{
 			Id:        1,
-			EventType: events.EVENT_TYPE_RESTAULANT,
-			TalkTexts: []string{"いらっしゃい、なににしますか？"},
+			EventType: events.EVENT_TYPE_MOB_TALK,
+			TalkTexts: []string{
+				"いらっしゃい、きょうは さかなが はいってるよ",
+				"なににしますか？",
+			},
+			NextEventId: 2,
+			StoreId:     -1,
+		},
+		&events.Event{
+			Id:          2,
+			EventType:   events.EVENT_TYPE_STORE,
+			TalkTexts:   []string{},
+			NextEventId: -1,
+			StoreId:     1,
+		},
+	}
+}
+
+func generateStores() []*Store {
+	return []*Store{
+		&Store{
+			Id: 1,
 		},
 	}
 }

@@ -71,5 +71,5 @@ func (t *TalkPanel) Draw(screen *ebiten.Image, data *gamestatus.GameData) {
 	op.GeoM.Translate(float64(t.rect.Position.X+5), float64(t.rect.Position.Y+5))
 	const lineSpacing = 48
 	op.LineSpacing = lineSpacing
-	text.Draw(screen, data.Event.TalkTexts[0], t.font, op)
+	text.Draw(screen, data.Event.TalkTexts[data.EventMessageSeq], t.font, op)
 }
