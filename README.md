@@ -35,3 +35,19 @@ build
 ```shell
 go run github.com/hajimehoshi/ebiten/v2/cmd/ebitenmobile bind -target android -javapkg com.miyatama.game_main -o ./mobile/android/ebitengine/game_main.aar ./mobile
 ```
+
+emulator
+
+```shell
+emulator -list-avds
+Pixel_6a
+emulator -avd Pixel_6a
+```
+
+android apk install
+
+```shell
+cd mobile/android
+./gradlew assembleDebug
+adb install .\app\build\outputs\apk\debug\app-debug.apk
+```

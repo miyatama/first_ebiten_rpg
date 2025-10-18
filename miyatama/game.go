@@ -3,6 +3,7 @@ package miyatama
 import (
 	"fmt"
 	"log/slog"
+	"runtime"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
@@ -20,6 +21,9 @@ type Game struct {
 
 func (g *Game) Init() {
 	g.gameData.TouchIds = []ebiten.TouchID{}
+	g.gameData.GOOS = runtime.GOOS
+	slog.Info("Game.Init()",
+		slog.String("GOOS", g.gameData.GOOS))
 }
 
 func (g *Game) Update() error {

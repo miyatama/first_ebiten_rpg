@@ -106,6 +106,9 @@ func (g *GamePad) Init() error {
 }
 
 func (g *GamePad) Update(data *gamestatus.GameData) {
+  if !data.IsMobile() {
+    return
+  }
 	// calculate game pad position
 	if g.calcPanelRectHeight != data.LayoutHeight || g.calcPanelRectWidth != data.LayoutWidth {
 		slog.Info("GamePad.Update()",
@@ -191,6 +194,9 @@ func (g *GamePad) Update(data *gamestatus.GameData) {
 }
 
 func (g *GamePad) Draw(screen *ebiten.Image, data *gamestatus.GameData) {
+  if !data.IsMobile() {
+    return
+  }
 	if g.calcPanelRectHeight != data.LayoutHeight || g.calcPanelRectWidth != data.LayoutWidth {
 		return
 	}

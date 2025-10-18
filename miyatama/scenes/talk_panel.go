@@ -43,7 +43,10 @@ func (t *TalkPanel) Update(data *gamestatus.GameData, gamepadRect *util.Rect) {
 			slog.String("recalculate", "layout"),
 		)
 		panelHeight := int(float32(data.LayoutHeight) * 0.2)
-		panelY := gamepadRect.Top - panelHeight - 10
+    panelY := data.LayoutHeight - panelHeight - 10
+    if data.IsMobile() {
+      panelY = gamepadRect.Top - panelHeight - 10
+    }
 		panelWidth := int(float32(data.LayoutWidth) * 0.9)
 		panelX := (data.LayoutWidth - panelWidth) / 2
 		t.rect = &util.Rect{

@@ -28,4 +28,12 @@ type GameData struct {
 	EventMessageSeq int
 	TouchIds        []ebiten.TouchID
 	TouchPositions  map[ebiten.TouchID]util.TouchPosition
+	GOOS            string
+}
+
+func (g *GameData) IsMobile() bool {
+  if g.GOOS == "android" || g.GOOS == "ios" {
+    return true
+  }
+  return false
 }
