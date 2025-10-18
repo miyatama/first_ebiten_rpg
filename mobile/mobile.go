@@ -23,24 +23,20 @@ func init() {
 	mobile.SetGame(g)
 }
 
-/*
 type AppLoggerCallback interface {
-	OutputLog()
+	OutputDebugLog(text string)
+	OutputInfoLog(text string)
+	OutputErrorLog(text string)
 }
 
-func RegisterAppLoggerCallback(callback AppLoggerCallback) {
-	game.RegisterAppLoggerCallback(func() { callback.OutputLog() })
-}
-
-type AdsCallback interface {
-	ShowAds()
-}
-
-func RegisterAdsCallback(callback AdsCallback) {
-	game.RegisterAdsCallback(func() { callback.ShowAds() })
+func RegisterMobileInterface(callback AppLoggerCallback) {
+	game.RegisterMobileInterface(
+		func(text string) { callback.OutputDebugLog(text) },
+		func(text string) { callback.OutputInfoLog(text) },
+		func(text string) { callback.OutputErrorLog(text) },
+	)
 }
 
 func IsInitializedGame() bool {
 	return game != nil
 }
-*/

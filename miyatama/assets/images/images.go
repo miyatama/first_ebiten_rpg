@@ -29,6 +29,9 @@ var (
 
 	//go:embed title_movable_map_image.png
 	TitleMovableMapImage []byte
+
+	//go:embed gamepad_50x50.png
+	GamePadImage []byte
 )
 
 func GetTitleMapImage() (*ebiten.Image, error) {

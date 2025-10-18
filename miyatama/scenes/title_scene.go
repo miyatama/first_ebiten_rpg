@@ -41,6 +41,7 @@ type TitleScene struct {
 	gameStateMsg          gamestatus.GameStateMsg
 	player                *Player
 	talkPanel             *TalkPanel
+	gamepad               *GamePad
 	mapImage              *ebiten.Image
 	movableMap            map[util.MapPosition]bool
 	currentPlayerPosition util.MapPosition
@@ -61,6 +62,11 @@ type TitleScene struct {
 
 func (t *TitleScene) Init() error {
 	t.gameStateMsg = gamestatus.GAME_STATE_MSG_NONE
+	t.gamepad = &GamePad{}
+	if err := t.gamepad.Init(); err != nil {
+		return err
+	}
+
 	t.player = &Player{}
 	if err := t.player.Init(); err != nil {
 		return err
@@ -127,6 +133,7 @@ func (t *TitleScene) Init() error {
 }
 
 func (t *TitleScene) Update(data *gamestatus.GameData) {
+	t.gamepad.Update(data)
 	// キャラクタの移動
 	switch t.sceneStatus {
 	case IDLE:
@@ -194,7 +201,7 @@ func (t *TitleScene) Update(data *gamestatus.GameData) {
 		m.Update(data)
 	}
 	t.player.Update(data)
-	t.talkPanel.Update(data)
+	t.talkPanel.Update(data, t.gamepad.GetPadRect())
 }
 
 func (t *TitleScene) Draw(screen *ebiten.Image, data *gamestatus.GameData) {
@@ -243,6 +250,9 @@ func (t *TitleScene) Draw(screen *ebiten.Image, data *gamestatus.GameData) {
 			t.stores[t.storeIndex].Draw(screen, data)
 		}
 	}
+
+	// コントローラーの描画
+	t.gamepad.Draw(screen, data)
 	if t.userInputFrame > 0 {
 		t.userInputFrame--
 	}
@@ -453,6 +463,18 @@ func generateStores() []*Store {
 	return []*Store{
 		&Store{
 			Id: 1,
+			StoreInfo: &StoreInfo{
+				showpName: "みせや",
+				baseCommand: []string{
+					"かう",
+					"店を出る",
+				},
+				items: []string{
+					"しろきり",
+					"くろきり",
+					"あかきり",
+				},
+			},
 		},
 	}
 }

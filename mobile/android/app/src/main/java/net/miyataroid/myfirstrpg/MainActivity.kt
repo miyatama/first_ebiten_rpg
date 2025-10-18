@@ -13,13 +13,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.viewinterop.AndroidView
-import androidx.lifecycle.LifecycleCoroutineScope
 import androidx.lifecycle.coroutineScope
-import com.miyatama.game_main.mobile.AdsCallback
 import com.miyatama.game_main.mobile.AppLoggerCallback
 import com.miyatama.game_main.mobile.Mobile
 import go.Seq
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import net.miyataroid.myfirstrpg.ui.theme.MyFirstRpgTheme
@@ -59,8 +56,18 @@ class MainActivity : ComponentActivity() {
                 return false
             }
 
-            Mobile.registerAdsCallback { Log.d("measurement", "ads callback") }
-            Mobile.registerAppLoggerCallback { Log.d("measurement", "app logger callback") }
+            Mobile.registerMobileInterface(object: AppLoggerCallback {
+                override fun outputDebugLog(text: String) {
+                    Log.d("measurement", text)
+                }
+                override fun outputInfoLog(text: String) {
+                    Log.i("measurement", text)
+                }
+                override fun outputErrorLog(text: String) {
+                    Log.e("measurement", text)
+                }
+
+            })
             return true
         }
 

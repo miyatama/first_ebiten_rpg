@@ -1,6 +1,11 @@
 package gamestatus
 
-import "first_rpg/miyatama/assets/events"
+import (
+	"first_rpg/miyatama/assets/events"
+	"first_rpg/miyatama/util"
+
+	"github.com/hajimehoshi/ebiten/v2"
+)
 
 type UserAction int
 
@@ -21,4 +26,6 @@ type GameData struct {
 	LayoutHeight    int
 	Event           *events.Event
 	EventMessageSeq int
+	TouchIds        []ebiten.TouchID
+	TouchPositions  map[ebiten.TouchID]util.TouchPosition
 }

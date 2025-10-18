@@ -6,6 +6,6 @@ func init() {
 
 func NewGame() (*Game, error) {
 	game := &Game{}
-	// TODO load assets
+	game.Init()
 	return game, nil
 }
