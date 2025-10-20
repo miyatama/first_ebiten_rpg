@@ -106,9 +106,9 @@ func (g *GamePad) Init() error {
 }
 
 func (g *GamePad) Update(data *gamestatus.GameData) {
-  if !data.IsMobile() {
-    return
-  }
+	if !data.IsMobile() {
+		return
+	}
 	// calculate game pad position
 	if g.calcPanelRectHeight != data.LayoutHeight || g.calcPanelRectWidth != data.LayoutWidth {
 		slog.Info("GamePad.Update()",
@@ -182,21 +182,48 @@ func (g *GamePad) Update(data *gamestatus.GameData) {
 		)
 	}
 
-	for _, touchId := range data.TouchIds {
-		touchPosition := data.TouchPositions[touchId]
+	//process user device tap
+	if len(data.TouchIds) > 0 {
+		touchPosition := data.TouchPositions[data.TouchIds[0]]
 		slog.Info("GamePad.Update()",
 			slog.Int("touchPosition.X", touchPosition.X),
 			slog.Int("touchPosition.Y", touchPosition.Y),
 		)
+
+		// Decide
+		if g.aButtonRect.Contains(touchPosition.X, touchPosition.Y) {
+			data.UserAction = gamestatus.USER_ACTION_DECIDE
+		}
+
+		if g.gamepadRect.Contains(touchPosition.X, touchPosition.Y) {
+			subRects := g.gamepadRect.SplitGrid(3, 3)
+			// Up
+			if subRects[1].Contains(touchPosition.X, touchPosition.Y) {
+				data.UserAction = gamestatus.USER_ACTION_UP
+			}
+			// Left
+			if subRects[3].Contains(touchPosition.X, touchPosition.Y) {
+				data.UserAction = gamestatus.USER_ACTION_LEFT
+			}
+			// right
+			if subRects[5].Contains(touchPosition.X, touchPosition.Y) {
+				data.UserAction = gamestatus.USER_ACTION_RIGHT
+			}
+			// down
+			if subRects[7].Contains(touchPosition.X, touchPosition.Y) {
+				data.UserAction = gamestatus.USER_ACTION_DOWN
+			}
+
+		}
+
 	}
-	//todo process user device tap
 
 }
 
 func (g *GamePad) Draw(screen *ebiten.Image, data *gamestatus.GameData) {
-  if !data.IsMobile() {
-    return
-  }
+	if !data.IsMobile() {
+		return
+	}
 	if g.calcPanelRectHeight != data.LayoutHeight || g.calcPanelRectWidth != data.LayoutWidth {
 		return
 	}
