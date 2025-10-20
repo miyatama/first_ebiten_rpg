@@ -22,6 +22,7 @@ type Game struct {
 func (g *Game) Init() {
 	g.gameData.TouchIds = []ebiten.TouchID{}
 	g.gameData.GOOS = runtime.GOOS
+	g.gameData.Environemnt = &gamestatus.Environment{}
 	slog.Info("Game.Init()",
 		slog.String("GOOS", g.gameData.GOOS))
 }
@@ -105,4 +106,11 @@ func (g *Game) deviceOutputDebugLog(text string) {
 	if g.mobileInterface.OutputDebugLog != nil {
 		g.mobileInterface.OutputDebugLog(text)
 	}
+}
+
+func (g *Game) RegisterWorkDir(path string) {
+	slog.Info("Game.RegisterWorkDir()",
+		slog.String("path", path),
+	)
+	g.gameData.Environemnt.WorkDirPath = path
 }

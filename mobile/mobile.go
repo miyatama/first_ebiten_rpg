@@ -40,3 +40,7 @@ func RegisterMobileInterface(callback AppLoggerCallback) {
 func IsInitializedGame() bool {
 	return game != nil
 }
+
+func RegisterWorkDir(path string) {
+	game.RegisterWorkDir(path)
+}

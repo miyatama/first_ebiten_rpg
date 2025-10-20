@@ -71,10 +71,15 @@ class MainActivity : ComponentActivity() {
             return true
         }
 
+        fun setWorkDir() {
+            Mobile.registerWorkDir(getApplicationContext().filesDir.getPath())
+        }
+
         lifecycle.coroutineScope.launch {
             while(!setListener()) {
                 delay(500)
             }
+            setWorkDir()
         }
     }
 

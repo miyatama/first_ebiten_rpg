@@ -29,11 +29,12 @@ type GameData struct {
 	TouchIds        []ebiten.TouchID
 	TouchPositions  map[ebiten.TouchID]util.TouchPosition
 	GOOS            string
+	Environemnt     *Environment
 }
 
 func (g *GameData) IsMobile() bool {
-  if g.GOOS == "android" || g.GOOS == "ios" {
-    return true
-  }
-  return false
+	if g.GOOS == "android" || g.GOOS == "ios" {
+		return true
+	}
+	return false
 }
