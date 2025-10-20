@@ -12,6 +12,10 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 )
 
+const (
+	PLAYER_MOVING_FRAME_COUNT = 30
+)
+
 type Player struct {
 	userDirection util.Direction
 	frame         int

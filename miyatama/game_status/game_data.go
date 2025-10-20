@@ -18,6 +18,10 @@ const (
 	USER_ACTION_DECIDE
 )
 
+const (
+	USER_INPUT_WAIT_FRAME_COUNT = 20
+)
+
 type GameData struct {
 	UserAction      UserAction
 	ScreenWidth     int
