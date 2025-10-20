@@ -241,13 +241,30 @@ func (g *GamePad) Draw(screen *ebiten.Image, data *gamestatus.GameData) {
 	op := &ebiten.DrawImageOptions{}
 	op.GeoM.Scale(g.gamepadScale, g.gamepadScale)
 	op.GeoM.Translate(float64(g.gamepadRect.Left), float64(g.gamepadRect.Top))
-	screen.DrawImage(g.gamepadImages[GAME_PAD_IMAGE_PAD_NONE], op)
+	padImageIndex := GAME_PAD_IMAGE_PAD_NONE
+	switch data.UserAction {
+	case gamestatus.USER_ACTION_LEFT:
+		padImageIndex = GAME_PAD_IMAGE_PAD_LEFT
+	case gamestatus.USER_ACTION_RIGHT:
+		padImageIndex = GAME_PAD_IMAGE_PAD_RIGHT
+	case gamestatus.USER_ACTION_UP:
+		padImageIndex = GAME_PAD_IMAGE_PAD_UP
+	case gamestatus.USER_ACTION_DOWN:
+		padImageIndex = GAME_PAD_IMAGE_PAD_DOWN
+	default:
+		padImageIndex = GAME_PAD_IMAGE_PAD_NONE
+	}
+	screen.DrawImage(g.gamepadImages[padImageIndex], op)
 
 	// A button
+	imageIndex := GAME_PAD_IMAGE_A_BUTTON_OFF
+	if data.UserAction == gamestatus.USER_ACTION_DECIDE {
+		imageIndex = GAME_PAD_IMAGE_A_BUTTON_ON
+	}
 	op = &ebiten.DrawImageOptions{}
 	op.GeoM.Scale(g.buttonScale, g.buttonScale)
 	op.GeoM.Translate(float64(g.aButtonRect.Left), float64(g.aButtonRect.Top))
-	screen.DrawImage(g.gamepadImages[GAME_PAD_IMAGE_A_BUTTON_OFF], op)
+	screen.DrawImage(g.gamepadImages[imageIndex], op)
 
 	// B button
 	op = &ebiten.DrawImageOptions{}
