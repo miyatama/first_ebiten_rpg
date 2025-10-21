@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"errors"
 	miyatamaAudio "first_rpg/miyatama/assets/audio"
-	"first_rpg/miyatama/assets/events"
 	"first_rpg/miyatama/assets/images"
 	maps "first_rpg/miyatama/assets/maps"
 	gamestatus "first_rpg/miyatama/game_status"
@@ -26,8 +25,7 @@ type TitleSceneStatus int
 const (
 	TITLE_SCENE_STATUS_IDLE TitleSceneStatus = iota
 	TITLE_SCENE_STATUS_MOVING
-	TITLE_SCENE_STATUS_TALK_MOB
-	TITLE_SCENE_STATUS_STORE
+	TITLE_SCENE_PROCESS_EVENT
 )
 
 /**
@@ -49,16 +47,16 @@ type TitleScene struct {
 	sceneStatus           TitleSceneStatus
 	movingFrame           int
 	mobs                  []*MobCharacter
-	events                []*events.Event
+	processEvent          *gamestatus.Event
+	processEventTalkSeq   int
+	events                []*gamestatus.Event
 	stores                []*Store
 	storeIndex            int
 	userInputFrame        int
-	// Audio
-	audioContext *audio.Context
-	audioPlayer  *audio.Player
+	audioPlayer           *audio.Player
 }
 
-func (t *TitleScene) Init() error {
+func (t *TitleScene) Init(data *gamestatus.GameData) error {
 	t.gameStateMsg = gamestatus.GAME_STATE_MSG_NONE
 	t.gamepad = &GamePad{}
 	if err := t.gamepad.Init(); err != nil {
@@ -100,7 +98,7 @@ func (t *TitleScene) Init() error {
 	}
 
 	// イベント
-	t.events = []*events.Event{}
+	t.events = []*gamestatus.Event{}
 	t.events = append(t.events, t.generateEvents()...)
 
 	// ストア
@@ -115,13 +113,11 @@ func (t *TitleScene) Init() error {
 	t.talkPanel.Init()
 
 	// BGM
-	audioContext := audio.NewContext(miyatamaAudio.DEFAULT_SAMPLE_RATE)
-	t.audioContext = audioContext
 	audioStream, err := mp3.DecodeF32(bytes.NewReader(miyatamaAudio.Ragtime_mp3))
 	if err != nil {
 		return err
 	}
-	audioPlayer, err := audioContext.NewPlayerF32(audioStream)
+	audioPlayer, err := data.AudioContext.NewPlayerF32(audioStream)
 	if err != nil {
 		return err
 	}
@@ -147,53 +143,61 @@ func (t *TitleScene) Update(data *gamestatus.GameData) {
 			}
 			f()
 		}
-	case TITLE_SCENE_STATUS_TALK_MOB:
+	case TITLE_SCENE_PROCESS_EVENT:
 		{
 			f := func() {
-				// イベントを次に進める
-				if !t.allowUserInput() {
-					return
-				}
-				if data.UserAction != gamestatus.USER_ACTION_DECIDE {
-					return
-				}
-				if len(data.Event.TalkTexts) > data.EventMessageSeq+1 {
-					data.EventMessageSeq++
-					return
-				}
-				if data.Event.NextEventId <= 0 {
-					t.sceneStatus = TITLE_SCENE_STATUS_IDLE
-					data.Event = nil
-					return
-				}
-				evevnt, _, err := t.getEvent(data.Event.NextEventId)
-				if err != nil {
-					slog.Error(err.Error(),
-						slog.Int("event id", data.Event.NextEventId),
-					)
-					return
-				}
-				data.Event = evevnt
-				if evevnt.EventType == events.EVENT_TYPE_STORE {
-					t.sceneStatus = TITLE_SCENE_STATUS_STORE
-					_, storeIndex, err := t.getStore(evevnt.StoreId)
-					if err != nil {
-						slog.Error(err.Error(),
-							slog.Int("store id", evevnt.StoreId),
-						)
-						return
+				switch t.processEvent.EventType {
+				case gamestatus.EVENT_TYPE_MOB_TALK:
+					{
+						// イベントを次に進める
+						if !t.allowUserInput() {
+							return
+						}
+						if data.UserAction != gamestatus.USER_ACTION_DECIDE {
+							return
+						}
+						if len(t.processEvent.TalkTexts) > t.processEventTalkSeq+1 {
+							t.processEventTalkSeq++
+							t.talkPanel.SetText(t.processEvent.TalkTexts[t.processEventTalkSeq])
+							return
+						}
+						if t.processEvent.NextEventId <= 0 {
+							t.sceneStatus = TITLE_SCENE_STATUS_IDLE
+							t.processEvent = nil
+							return
+						}
+						evevnt, _, err := t.getEvent(t.processEvent.NextEventId)
+						if err != nil {
+							slog.Error(err.Error(),
+								slog.Int("event id", t.processEvent.NextEventId),
+							)
+							return
+						}
+						t.processEvent = evevnt
+
+						if evevnt.EventType == gamestatus.EVENT_TYPE_STORE {
+							_, storeIndex, err := t.getStore(evevnt.StoreId)
+							if err != nil {
+								slog.Error(err.Error(),
+									slog.Int("store id", evevnt.StoreId),
+								)
+								return
+							}
+							t.storeIndex = storeIndex
+						}
 					}
-					t.storeIndex = storeIndex
+				case gamestatus.EVENT_TYPE_STORE:
+					{
+						t.stores[t.storeIndex].Update(data)
+					}
+				case gamestatus.EVENT_TYPE_CHANGE_SCENE:
+					{
+						t.gameStateMsg = gamestatus.GAME_STATE_MSG_HOUSE
+					}
 				}
 			}
 			f()
 		}
-	case TITLE_SCENE_STATUS_STORE:
-		f := func() {
-			// ストアのUPDATE
-			t.stores[t.storeIndex].Update(data)
-		}
-		f()
 	}
 	for _, m := range t.mobs {
 		m.Update(data)
@@ -238,14 +242,16 @@ func (t *TitleScene) Draw(screen *ebiten.Image, data *gamestatus.GameData) {
 	t.player.Draw(screen, data)
 
 	// モブ会話の描画
-	switch t.sceneStatus {
-	case TITLE_SCENE_STATUS_TALK_MOB:
-		{
-			t.talkPanel.Draw(screen, data)
-		}
-	case TITLE_SCENE_STATUS_STORE:
-		{
-			t.stores[t.storeIndex].Draw(screen, data)
+	if t.processEvent != nil {
+		switch t.processEvent.EventType {
+		case gamestatus.EVENT_TYPE_MOB_TALK:
+			{
+				t.talkPanel.Draw(screen, data)
+			}
+		case gamestatus.EVENT_TYPE_STORE:
+			{
+				t.stores[t.storeIndex].Draw(screen, data)
+			}
 		}
 	}
 
@@ -293,14 +299,19 @@ func (t *TitleScene) actionMobCharacter(data *gamestatus.GameData) bool {
 	existsMobCharacter, mobIndex := t.existsMobCharacter(nextX, nextY)
 	if existsMobCharacter {
 		t.player.SetUserAction(data.UserAction)
-		t.sceneStatus = TITLE_SCENE_STATUS_TALK_MOB
+		t.sceneStatus = TITLE_SCENE_PROCESS_EVENT
 		eventId := t.mobs[mobIndex].EventId
-		for _, e := range t.events {
-			if e.Id == eventId {
-				data.Event = e
-				data.EventMessageSeq = 0
-				break
-			}
+		event, _, err := t.getEvent(eventId)
+		if err != nil {
+			slog.Error(err.Error(),
+				slog.Int("event id", eventId),
+			)
+			return false
+		}
+		t.processEvent = event
+		t.processEventTalkSeq = 0
+		if event.EventType == gamestatus.EVENT_TYPE_MOB_TALK {
+			t.talkPanel.SetText(t.processEvent.TalkTexts[0])
 		}
 		slog.Info("TitleScene.actionMobCharacter",
 			slog.Int("mob index", mobIndex),
@@ -320,13 +331,13 @@ func (t *TitleScene) allowUserInput() bool {
 	}
 }
 
-func (t *TitleScene) getEvent(id int) (*events.Event, int, error) {
+func (t *TitleScene) getEvent(id int) (*gamestatus.Event, int, error) {
 	for i, e := range t.events {
 		if e.Id == id {
 			return e, i, nil
 		}
 	}
-	return &events.Event{}, -1, errors.New("event not found")
+	return &gamestatus.Event{}, -1, errors.New("event not found")
 
 }
 
@@ -425,21 +436,30 @@ func (t *TitleScene) generateMobCharacter() []*MobCharacter {
 			Direction: util.DIRECTION_DOWN,
 			EventId:   1,
 		},
+		&MobCharacter{
+			MobType: MOB_TYPE_NONE,
+			Position: util.MapPosition{
+				X: 26,
+				Y: 5,
+			},
+			Direction: util.DIRECTION_DOWN,
+			EventId:   3,
+		},
 	}
 }
 
-func (t *TitleScene) generateEvents() []*events.Event {
-	return []*events.Event{
-		&events.Event{
+func (t *TitleScene) generateEvents() []*gamestatus.Event {
+	return []*gamestatus.Event{
+		&gamestatus.Event{
 			Id:          0,
-			EventType:   events.EVENT_TYPE_MOB_TALK,
+			EventType:   gamestatus.EVENT_TYPE_MOB_TALK,
 			TalkTexts:   []string{"シャー！"},
 			NextEventId: -1,
 			StoreId:     -1,
 		},
-		&events.Event{
+		&gamestatus.Event{
 			Id:        1,
-			EventType: events.EVENT_TYPE_MOB_TALK,
+			EventType: gamestatus.EVENT_TYPE_MOB_TALK,
 			TalkTexts: []string{
 				"いらっしゃい、きょうは さかなが はいってるよ",
 				"なににしますか？",
@@ -447,12 +467,19 @@ func (t *TitleScene) generateEvents() []*events.Event {
 			NextEventId: 2,
 			StoreId:     -1,
 		},
-		&events.Event{
+		&gamestatus.Event{
 			Id:          2,
-			EventType:   events.EVENT_TYPE_STORE,
+			EventType:   gamestatus.EVENT_TYPE_STORE,
 			TalkTexts:   []string{},
 			NextEventId: -1,
 			StoreId:     1,
+		},
+		&gamestatus.Event{
+			Id:          3,
+			EventType:   gamestatus.EVENT_TYPE_CHANGE_SCENE,
+			TalkTexts:   []string{},
+			NextEventId: -1,
+			EventTag:    gamestatus.EVENT_TAG_CHANGE_TO_HOUSE_SCENE,
 		},
 	}
 }

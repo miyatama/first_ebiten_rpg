@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"errors"
 	miyatamaAudio "first_rpg/miyatama/assets/audio"
-	"first_rpg/miyatama/assets/events"
 	"first_rpg/miyatama/assets/images"
 	maps "first_rpg/miyatama/assets/maps"
 	gamestatus "first_rpg/miyatama/game_status"
@@ -17,8 +16,8 @@ import (
 )
 
 const (
-	HOUSE_MAP_ROWS = 50
-	HOUSE_MAP_COLS = 50
+	HOUSE_MAP_ROWS = 10
+	HOUSE_MAP_COLS = 10
 )
 
 type HouseSceneStatus int
@@ -26,7 +25,7 @@ type HouseSceneStatus int
 const (
 	HOUSE_SCENE_STATUS_IDLE HouseSceneStatus = iota
 	HOUSE_SCENE_STATUS_MOVING
-	HOUSE_SCENE_STATUS_TALK_MOB
+	HOUSE_SCENE_STATUS_PROCESS_EVENT
 )
 
 /**
@@ -48,14 +47,15 @@ type HouseScene struct {
 	sceneStatus           HouseSceneStatus
 	movingFrame           int
 	mobs                  []*MobCharacter
-	events                []*events.Event
+	processEvent          *gamestatus.Event
+	processEventTalkSeq   int
+	events                []*gamestatus.Event
 	userInputFrame        int
 	// Audio
-	audioContext *audio.Context
-	audioPlayer  *audio.Player
+	audioPlayer *audio.Player
 }
 
-func (h *HouseScene) Init() error {
+func (h *HouseScene) Init(data *gamestatus.GameData) error {
 	h.gameStateMsg = gamestatus.GAME_STATE_MSG_NONE
 	h.gamepad = &GamePad{}
 	if err := h.gamepad.Init(); err != nil {
@@ -85,8 +85,8 @@ func (h *HouseScene) Init() error {
 
 	// プレイヤー初期位置
 	h.currentPlayerPosition = util.MapPosition{
-		X: 24,
-		Y: 21,
+		X: 5,
+		Y: 7,
 	}
 
 	// モブキャラクター
@@ -97,7 +97,7 @@ func (h *HouseScene) Init() error {
 	}
 
 	// イベント
-	h.events = []*events.Event{}
+	h.events = []*gamestatus.Event{}
 	h.events = append(h.events, h.generateEvents()...)
 
 	// トーク用パネル
@@ -105,13 +105,11 @@ func (h *HouseScene) Init() error {
 	h.talkPanel.Init()
 
 	// BGM
-	audioContext := audio.NewContext(miyatamaAudio.DEFAULT_SAMPLE_RATE)
-	h.audioContext = audioContext
 	audioStream, err := mp3.DecodeF32(bytes.NewReader(miyatamaAudio.Ragtime_mp3))
 	if err != nil {
 		return err
 	}
-	audioPlayer, err := audioContext.NewPlayerF32(audioStream)
+	audioPlayer, err := data.AudioContext.NewPlayerF32(audioStream)
 	if err != nil {
 		return err
 	}
@@ -137,34 +135,43 @@ func (h *HouseScene) Update(data *gamestatus.GameData) {
 			}
 			f()
 		}
-	case HOUSE_SCENE_STATUS_TALK_MOB:
+	case HOUSE_SCENE_STATUS_PROCESS_EVENT:
 		{
 			f := func() {
-				// イベントを次に進める
-				if !h.allowUserInput() {
-					return
+				switch h.processEvent.EventType {
+				case gamestatus.EVENT_TYPE_MOB_TALK:
+					{
+						// イベントを次に進める
+						if !h.allowUserInput() {
+							return
+						}
+						if data.UserAction != gamestatus.USER_ACTION_DECIDE {
+							return
+						}
+						if len(h.processEvent.TalkTexts) > h.processEventTalkSeq+1 {
+							h.processEventTalkSeq++
+							h.talkPanel.SetText(h.processEvent.TalkTexts[h.processEventTalkSeq])
+							return
+						}
+						if h.processEvent.NextEventId <= 0 {
+							h.sceneStatus = HOUSE_SCENE_STATUS_IDLE
+							h.processEvent = nil
+							return
+						}
+						evevnt, _, err := h.getEvent(h.processEvent.NextEventId)
+						if err != nil {
+							slog.Error(err.Error(),
+								slog.Int("event id", h.processEvent.NextEventId),
+							)
+							return
+						}
+						h.processEvent = evevnt
+					}
+				case gamestatus.EVENT_TYPE_CHANGE_SCENE:
+					{
+						// TODO PROCESS CHANGE SCENE
+					}
 				}
-				if data.UserAction != gamestatus.USER_ACTION_DECIDE {
-					return
-				}
-				if len(data.Event.TalkTexts) > data.EventMessageSeq+1 {
-					data.EventMessageSeq++
-					return
-				}
-				if data.Event.NextEventId <= 0 {
-					h.sceneStatus = HOUSE_SCENE_STATUS_IDLE
-					data.Event = nil
-					return
-				}
-				evevnt, _, err := h.getEvent(data.Event.NextEventId)
-				if err != nil {
-					slog.Error(err.Error(),
-						slog.Int("event id", data.Event.NextEventId),
-					)
-					return
-				}
-				data.Event = evevnt
-				//TODO setting next event
 			}
 			f()
 		}
@@ -212,10 +219,12 @@ func (h *HouseScene) Draw(screen *ebiten.Image, data *gamestatus.GameData) {
 	h.player.Draw(screen, data)
 
 	// モブ会話の描画
-	switch h.sceneStatus {
-	case HOUSE_SCENE_STATUS_TALK_MOB:
-		{
-			h.talkPanel.Draw(screen, data)
+	if h.processEvent != nil {
+		switch h.processEvent.EventType {
+		case gamestatus.EVENT_TYPE_MOB_TALK:
+			{
+				h.talkPanel.Draw(screen, data)
+			}
 		}
 	}
 
@@ -263,12 +272,13 @@ func (h *HouseScene) actionMobCharacter(data *gamestatus.GameData) bool {
 	existsMobCharacter, mobIndex := h.existsMobCharacter(nextX, nextY)
 	if existsMobCharacter {
 		h.player.SetUserAction(data.UserAction)
-		h.sceneStatus = HOUSE_SCENE_STATUS_TALK_MOB
+		h.sceneStatus = HOUSE_SCENE_STATUS_PROCESS_EVENT
 		eventId := h.mobs[mobIndex].EventId
 		for _, e := range h.events {
 			if e.Id == eventId {
-				data.Event = e
-				data.EventMessageSeq = 0
+				h.processEvent = e
+				h.processEventTalkSeq = 0
+				h.talkPanel.SetText(h.processEvent.TalkTexts[h.processEventTalkSeq])
 				break
 			}
 		}
@@ -290,13 +300,13 @@ func (h *HouseScene) allowUserInput() bool {
 	}
 }
 
-func (h *HouseScene) getEvent(id int) (*events.Event, int, error) {
+func (h *HouseScene) getEvent(id int) (*gamestatus.Event, int, error) {
 	for i, e := range h.events {
 		if e.Id == id {
 			return e, i, nil
 		}
 	}
-	return &events.Event{}, -1, errors.New("event not found")
+	return &gamestatus.Event{}, -1, errors.New("event not found")
 }
 
 func (h *HouseScene) isInputDirection(userAction gamestatus.UserAction) bool {
@@ -328,11 +338,11 @@ func (h *HouseScene) getNextPosition(currentX, currentY int, userAction gamestat
 	if nextY < 0 {
 		nextY = 0
 	}
-	if nextX >= TITLE_MAP_COLS {
-		nextX = TITLE_MAP_COLS - 1
+	if nextX >= HOUSE_MAP_COLS {
+		nextX = HOUSE_MAP_COLS - 1
 	}
-	if nextY >= TITLE_MAP_ROWS {
-		nextY = TITLE_MAP_ROWS - 1
+	if nextY >= HOUSE_MAP_ROWS {
+		nextY = HOUSE_MAP_ROWS - 1
 	}
 	return nextX, nextY
 }
@@ -360,31 +370,14 @@ func (h *HouseScene) generateMobCharacter() []*MobCharacter {
 	}
 }
 
-func (h *HouseScene) generateEvents() []*events.Event {
-	return []*events.Event{
-		&events.Event{
+func (h *HouseScene) generateEvents() []*gamestatus.Event {
+	return []*gamestatus.Event{
+		&gamestatus.Event{
 			Id:          0,
-			EventType:   events.EVENT_TYPE_MOB_TALK,
+			EventType:   gamestatus.EVENT_TYPE_MOB_TALK,
 			TalkTexts:   []string{"シャー！"},
 			NextEventId: -1,
 			StoreId:     -1,
-		},
-		&events.Event{
-			Id:        1,
-			EventType: events.EVENT_TYPE_MOB_TALK,
-			TalkTexts: []string{
-				"いらっしゃい、きょうは さかなが はいってるよ",
-				"なににしますか？",
-			},
-			NextEventId: 2,
-			StoreId:     -1,
-		},
-		&events.Event{
-			Id:          2,
-			EventType:   events.EVENT_TYPE_STORE,
-			TalkTexts:   []string{},
-			NextEventId: -1,
-			StoreId:     1,
 		},
 	}
 }

@@ -20,6 +20,7 @@ type TalkPanel struct {
 	background          color.Color
 	calcPanelRectHeight int
 	calcPanelRectWidth  int
+	Text                string
 	rect                *util.Rect
 	font                *text.GoTextFace
 }
@@ -43,10 +44,10 @@ func (t *TalkPanel) Update(data *gamestatus.GameData, gamepadRect *util.Rect) {
 			slog.String("recalculate", "layout"),
 		)
 		panelHeight := int(float32(data.LayoutHeight) * 0.2)
-    panelY := data.LayoutHeight - panelHeight - 10
-    if data.IsMobile() {
-      panelY = gamepadRect.Top - panelHeight - 10
-    }
+		panelY := data.LayoutHeight - panelHeight - 10
+		if data.IsMobile() {
+			panelY = gamepadRect.Top - panelHeight - 10
+		}
 		panelWidth := int(float32(data.LayoutWidth) * 0.9)
 		panelX := (data.LayoutWidth - panelWidth) / 2
 		t.rect = &util.Rect{
@@ -69,13 +70,14 @@ func (t *TalkPanel) Update(data *gamestatus.GameData, gamepadRect *util.Rect) {
 }
 
 func (t *TalkPanel) Draw(screen *ebiten.Image, data *gamestatus.GameData) {
-	if data.Event == nil {
-		return
-	}
 	vector.DrawFilledRect(screen, float32(t.rect.Left), float32(t.rect.Top), float32(t.rect.Width()), float32(t.rect.Height()), t.background, false)
 	op := &text.DrawOptions{}
 	op.GeoM.Translate(float64(t.rect.Left+5), float64(t.rect.Top+5))
 	const lineSpacing = 48
 	op.LineSpacing = lineSpacing
-	text.Draw(screen, data.Event.TalkTexts[data.EventMessageSeq], t.font, op)
+	text.Draw(screen, t.Text, t.font, op)
+}
+
+func (t *TalkPanel) SetText(text string) {
+	t.Text = text
 }

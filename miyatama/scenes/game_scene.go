@@ -7,7 +7,7 @@ import (
 )
 
 type GameScene interface {
-	Init() error
+	Init(data *gamestatus.GameData) error
 	Update(data *gamestatus.GameData)
 	Draw(screen *ebiten.Image, data *gamestatus.GameData)
 	Msg() gamestatus.GameStateMsg

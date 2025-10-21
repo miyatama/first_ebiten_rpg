@@ -6,15 +6,17 @@ import (
 	"runtime"
 
 	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/hajimehoshi/ebiten/v2/audio"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 
+	miyatamaAudio "first_rpg/miyatama/assets/audio"
 	gamestatus "first_rpg/miyatama/game_status"
 	"first_rpg/miyatama/scenes"
 	"first_rpg/miyatama/util"
 )
 
 type Game struct {
-	scene           scenes.Scene
+	scene           scenes.GameScene
 	gameData        gamestatus.GameData
 	mobileInterface gamestatus.MobileInterface
 }
@@ -23,6 +25,7 @@ func (g *Game) Init() {
 	g.gameData.TouchIds = []ebiten.TouchID{}
 	g.gameData.GOOS = runtime.GOOS
 	g.gameData.Environemnt = &gamestatus.Environment{}
+	g.gameData.AudioContext = audio.NewContext(miyatamaAudio.DEFAULT_SAMPLE_RATE)
 	slog.Info("Game.Init()",
 		slog.String("GOOS", g.gameData.GOOS))
 }
@@ -31,8 +34,22 @@ func (g *Game) Update() error {
 	g.gameData.UserAction = keyToUserAction(inpututil.AppendPressedKeys([]ebiten.Key{}))
 	if g.scene == nil {
 		g.scene = &scenes.TitleScene{}
-		if err := g.scene.Init(); err != nil {
+		if err := g.scene.Init(&g.gameData); err != nil {
 			return err
+		}
+	} else {
+		switch g.scene.Msg() {
+
+		case gamestatus.GAME_STATE_MSG_TITLE:
+			g.scene = &scenes.TitleScene{}
+			if err := g.scene.Init(&g.gameData); err != nil {
+				return err
+			}
+		case gamestatus.GAME_STATE_MSG_HOUSE:
+			g.scene = &scenes.HouseScene{}
+			if err := g.scene.Init(&g.gameData); err != nil {
+				return err
+			}
 		}
 	}
 

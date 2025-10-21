@@ -1,10 +1,10 @@
 package gamestatus
 
 import (
-	"first_rpg/miyatama/assets/events"
 	"first_rpg/miyatama/util"
 
 	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/hajimehoshi/ebiten/v2/audio"
 )
 
 type UserAction int
@@ -23,17 +23,17 @@ const (
 )
 
 type GameData struct {
-	UserAction      UserAction
-	ScreenWidth     int
-	ScreenHeight    int
-	LayoutWidth     int
-	LayoutHeight    int
-	Event           *events.Event
-	EventMessageSeq int
-	TouchIds        []ebiten.TouchID
-	TouchPositions  map[ebiten.TouchID]util.TouchPosition
-	GOOS            string
-	Environemnt     *Environment
+	UserAction     UserAction
+	ScreenWidth    int
+	ScreenHeight   int
+	LayoutWidth    int
+	LayoutHeight   int
+	TouchIds       []ebiten.TouchID
+	TouchPositions map[ebiten.TouchID]util.TouchPosition
+	GOOS           string
+	Environemnt    *Environment
+	// Audio
+	AudioContext *audio.Context
 }
 
 func (g *GameData) IsMobile() bool {
