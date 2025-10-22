@@ -22,7 +22,7 @@ const (
 	// マスク画像の透過最小矩形幅
 	SCENE_SWITCH_MASK_TRANSPARENT_MIN_WIDTH = 197
 	SCENE_SWITCH_MASK_CENTER                = 256
-	SCENE_SWITCH_IRIS_FRAME_COUNT           = 60
+	SCENE_SWITCH_IRIS_FRAME_COUNT           = 30
 )
 
 type SceneSwitcher struct {

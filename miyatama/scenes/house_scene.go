@@ -24,8 +24,10 @@ type HouseSceneStatus int
 
 const (
 	HOUSE_SCENE_STATUS_IDLE HouseSceneStatus = iota
+	HOUSE_SCENE_STATUS_START_SCENE
 	HOUSE_SCENE_STATUS_MOVING
 	HOUSE_SCENE_STATUS_PROCESS_EVENT
+	HOUSE_SCENE_CHANGE_SCENE
 )
 
 /**
@@ -38,6 +40,7 @@ type HouseScene struct {
 	player                *Player
 	talkPanel             *TalkPanel
 	gamepad               *GamePad
+	sceneSwitcher         *SceneSwitcher
 	mapImage              *ebiten.Image
 	movableMap            map[util.MapPosition]bool
 	currentPlayerPosition util.MapPosition
@@ -115,6 +118,11 @@ func (h *HouseScene) Init(data *gamestatus.GameData) error {
 	}
 	h.audioPlayer = audioPlayer
 	h.audioPlayer.Play()
+
+	// シーン切り替え
+	h.sceneSwitcher = &SceneSwitcher{}
+	h.sceneSwitcher.Init()
+	h.sceneSwitcher.StartIrisIn()
 	return nil
 }
 
@@ -169,7 +177,8 @@ func (h *HouseScene) Update(data *gamestatus.GameData) {
 					}
 				case gamestatus.EVENT_TYPE_CHANGE_SCENE:
 					{
-						// TODO PROCESS CHANGE SCENE
+						h.sceneStatus = HOUSE_SCENE_CHANGE_SCENE
+						h.sceneSwitcher.StartIrisOut()
 					}
 				}
 			}
@@ -181,6 +190,7 @@ func (h *HouseScene) Update(data *gamestatus.GameData) {
 	}
 	h.player.Update(data)
 	h.talkPanel.Update(data, h.gamepad.GetPadRect())
+	h.sceneSwitcher.Update(data)
 }
 
 func (h *HouseScene) Draw(screen *ebiten.Image, data *gamestatus.GameData) {
@@ -233,6 +243,7 @@ func (h *HouseScene) Draw(screen *ebiten.Image, data *gamestatus.GameData) {
 	if h.userInputFrame > 0 {
 		h.userInputFrame--
 	}
+	h.sceneSwitcher.Draw(screen, data)
 }
 
 func (h *HouseScene) Msg() gamestatus.GameStateMsg {
