@@ -26,6 +26,7 @@ const (
 	TITLE_SCENE_STATUS_IDLE TitleSceneStatus = iota
 	TITLE_SCENE_STATUS_MOVING
 	TITLE_SCENE_PROCESS_EVENT
+	TITLE_SCENE_CHANGE_SCENE
 )
 
 /**
@@ -38,6 +39,7 @@ type TitleScene struct {
 	player                *Player
 	talkPanel             *TalkPanel
 	gamepad               *GamePad
+	sceneSwitcher         *SceneSwitcher
 	mapImage              *ebiten.Image
 	movableMap            map[util.MapPosition]bool
 	currentPlayerPosition util.MapPosition
@@ -123,11 +125,16 @@ func (t *TitleScene) Init(data *gamestatus.GameData) error {
 	}
 	t.audioPlayer = audioPlayer
 	t.audioPlayer.Play()
+
+	// シーン切り替え
+	t.sceneSwitcher = &SceneSwitcher{}
+	t.sceneSwitcher.Init()
 	return nil
 }
 
 func (t *TitleScene) Update(data *gamestatus.GameData) {
 	t.gamepad.Update(data)
+
 	// キャラクタの移動
 	switch t.sceneStatus {
 	case TITLE_SCENE_STATUS_IDLE:
@@ -192,11 +199,18 @@ func (t *TitleScene) Update(data *gamestatus.GameData) {
 					}
 				case gamestatus.EVENT_TYPE_CHANGE_SCENE:
 					{
-						t.gameStateMsg = gamestatus.GAME_STATE_MSG_HOUSE
+						t.sceneStatus = TITLE_SCENE_CHANGE_SCENE
+						t.sceneSwitcher.StartIrisOut()
 					}
 				}
 			}
 			f()
+		}
+	case TITLE_SCENE_CHANGE_SCENE:
+		{
+			if t.sceneSwitcher.IsIdle() {
+				t.gameStateMsg = gamestatus.GAME_STATE_MSG_HOUSE
+			}
 		}
 	}
 	for _, m := range t.mobs {
@@ -204,6 +218,7 @@ func (t *TitleScene) Update(data *gamestatus.GameData) {
 	}
 	t.player.Update(data)
 	t.talkPanel.Update(data, t.gamepad.GetPadRect())
+	t.sceneSwitcher.Update(data)
 }
 
 func (t *TitleScene) Draw(screen *ebiten.Image, data *gamestatus.GameData) {
@@ -259,6 +274,11 @@ func (t *TitleScene) Draw(screen *ebiten.Image, data *gamestatus.GameData) {
 	t.gamepad.Draw(screen, data)
 	if t.userInputFrame > 0 {
 		t.userInputFrame--
+	}
+
+	// シーン切り替えの描画
+	if t.sceneStatus == TITLE_SCENE_CHANGE_SCENE {
+		t.sceneSwitcher.Draw(screen, data)
 	}
 }
 

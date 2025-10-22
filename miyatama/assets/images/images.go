@@ -38,6 +38,9 @@ var (
 
 	//go:embed house_movable_map_image.png
 	HouseMovableMapImage []byte
+
+	//go:embed scene_switch_mask.png
+	SceneSwitchMask []byte
 )
 
 func GetTitleMapImage() (*ebiten.Image, error) {
@@ -56,6 +59,17 @@ func GetHouseMapImage() (*ebiten.Image, error) {
 	img, _, err := image.Decode(bytes.NewReader(HouseMapImage))
 	if err != nil {
 		slog.Error("house_map_image.png decode error")
+		slog.String("error: {}", err.Error())
+		return ebiten.NewImage(1, 1), err
+	}
+	return ebiten.NewImageFromImage(img), nil
+}
+
+func GetImage(imageBytes []byte) (*ebiten.Image, error) {
+	slog.Info("images GetImage()")
+	img, _, err := image.Decode(bytes.NewReader(imageBytes))
+	if err != nil {
+		slog.Error("image bytes decode error")
 		slog.String("error: {}", err.Error())
 		return ebiten.NewImage(1, 1), err
 	}
