@@ -21,7 +21,7 @@ type TalkPanel struct {
 	calcPanelRectHeight int
 	calcPanelRectWidth  int
 	Text                string
-	rect                *util.Rect
+	rect                *util.Rect[int]
 	font                *text.GoTextFace
 }
 
@@ -37,20 +37,20 @@ func (t *TalkPanel) Init() error {
 	return nil
 }
 
-func (t *TalkPanel) Update(data *gamestatus.GameData, gamepadRect *util.Rect) {
+func (t *TalkPanel) Update(data *gamestatus.GameData, gamepadRect *util.Rect[int]) {
 	// Panel表示領域再計算
 	if t.calcPanelRectHeight != data.LayoutHeight || t.calcPanelRectWidth != data.LayoutWidth {
 		slog.Info("TalkPanel.Update()",
 			slog.String("recalculate", "layout"),
 		)
-		panelHeight := int(float32(data.LayoutHeight) * 0.2)
+		panelHeight := int(data.TextSizeMiddleRect.Height() * 3)
 		panelY := data.LayoutHeight - panelHeight - 10
 		if data.IsMobile() {
 			panelY = gamepadRect.Top - panelHeight - 10
 		}
-		panelWidth := int(float32(data.LayoutWidth) * 0.9)
+		panelWidth := data.MessagePanelWidth
 		panelX := (data.LayoutWidth - panelWidth) / 2
-		t.rect = &util.Rect{
+		t.rect = &util.Rect[int]{
 			Left:   panelX,
 			Top:    panelY,
 			Right:  panelX + panelWidth,
@@ -59,7 +59,6 @@ func (t *TalkPanel) Update(data *gamestatus.GameData, gamepadRect *util.Rect) {
 		t.calcPanelRectHeight = data.LayoutHeight
 		t.calcPanelRectWidth = data.LayoutWidth
 
-		// 高さに応じてフォントサイズを変更
 		slog.Info("TalkPanel.Update()",
 			slog.Float64("font size", data.TextSizeMiddle))
 		t.font = &text.GoTextFace{

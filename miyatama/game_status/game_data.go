@@ -36,9 +36,13 @@ type GameData struct {
 	AudioContext *audio.Context
 
 	// TextSize
-	TextSizeLarge  float64
-	TextSizeMiddle float64
-	TextSizeSmall  float64
+	MessagePanelWidth  int
+	TextSizeLarge      float64
+	TextSizeLargeRect  util.Rect[float64]
+	TextSizeMiddle     float64
+	TextSizeMiddleRect util.Rect[float64]
+	TextSizeSmall      float64
+	TextSizeSmallRect  util.Rect[float64]
 }
 
 func (g *GameData) IsMobile() bool {

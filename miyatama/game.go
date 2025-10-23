@@ -135,6 +135,7 @@ func (g *Game) Layout(outsideWidth, outsideHeight int) (int, int) {
 		// 横幅の8割 - (border(5px) + mergin(5px)) * 2
 		messagePanelWidth = int(float32(outsideWidth)*0.8) - 20
 	}
+	g.gameData.MessagePanelWidth = messagePanelWidth
 	largeSize, err := getTextSize("０１２３４０１２３４", float64(messagePanelWidth), font)
 	if err != nil {
 		slog.Error("Game.Layout() get large text font size",
@@ -142,6 +143,13 @@ func (g *Game) Layout(outsideWidth, outsideHeight int) (int, int) {
 		)
 	}
 	g.gameData.TextSizeLarge = largeSize
+	w, h := getTextMeasure(font, largeSize)
+	g.gameData.TextSizeLargeRect = util.Rect[float64]{
+		Left:   0,
+		Top:    0,
+		Right:  w,
+		Bottom: h,
+	}
 	middleSize, err := getTextSize("０１２３４０１２３４０１２３４０１２３４", float64(messagePanelWidth), font)
 	if err != nil {
 		slog.Error("Game.Layout() get middle text font size",
@@ -149,6 +157,13 @@ func (g *Game) Layout(outsideWidth, outsideHeight int) (int, int) {
 		)
 	}
 	g.gameData.TextSizeMiddle = middleSize
+	w, h = getTextMeasure(font, middleSize)
+	g.gameData.TextSizeMiddleRect = util.Rect[float64]{
+		Left:   0,
+		Top:    0,
+		Right:  w,
+		Bottom: h,
+	}
 	smallSize, err := getTextSize("０１２３４０１２３４０１２３４０１２３４０１２３４０１２３４０１２３４０１２３４", float64(messagePanelWidth), font)
 	if err != nil {
 		slog.Error("Game.Layout() get small text font size",
@@ -156,6 +171,13 @@ func (g *Game) Layout(outsideWidth, outsideHeight int) (int, int) {
 		)
 	}
 	g.gameData.TextSizeSmall = smallSize
+	w, h = getTextMeasure(font, smallSize)
+	g.gameData.TextSizeSmallRect = util.Rect[float64]{
+		Left:   0,
+		Top:    0,
+		Right:  w,
+		Bottom: h,
+	}
 	slog.Info("Game.Layout()",
 		slog.Int("messagePanelWidth", messagePanelWidth),
 		slog.String("text size", fmt.Sprintf("{large: %f, middle: %f, small: %f}", largeSize, middleSize, smallSize)),
@@ -205,4 +227,10 @@ func getTextSize(sampleText string, panelWidth float64, font *text.GoTextFace) (
 		}
 	}
 	return 0, fmt.Errorf("text size not found")
+}
+
+func getTextMeasure(font *text.GoTextFace, fontSize float64) (float64, float64) {
+	font.Size = fontSize
+	lineSpacing := fontSize * 1.2
+	return text.Measure("０", font, lineSpacing)
 }

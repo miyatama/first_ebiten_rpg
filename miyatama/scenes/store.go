@@ -24,12 +24,12 @@ type Store struct {
 	Id                  int
 	calcPanelRectHeight int
 	calcPanelRectWidth  int
-	shopNameRect        *util.Rect
-	baseCommandRect     *util.Rect
-	itemsRect           *util.Rect
-	itemDescriptionRect *util.Rect
-	ownerMessageRect    *util.Rect
-	answerRect          *util.Rect
+	shopNameRect        *util.Rect[int]
+	baseCommandRect     *util.Rect[int]
+	itemsRect           *util.Rect[int]
+	itemDescriptionRect *util.Rect[int]
+	ownerMessageRect    *util.Rect[int]
+	answerRect          *util.Rect[int]
 	StoreInfo           *StoreInfo
 	font                *text.GoTextFace
 	background          color.Color
@@ -53,12 +53,13 @@ func (s *Store) Update(data *gamestatus.GameData) {
 		slog.Info("TalkPanel.Update()",
 			slog.String("recalculate", "layout"),
 		)
-		baseHeight := int(float32(data.LayoutHeight) * 0.05)
+		// 店名
+		baseHeight := int(data.TextSizeSmallRect.Height() + 4)
 		panelHeight := baseHeight
 		panelY := 5
 		panelWidth := int(float32(data.LayoutWidth) * 0.3)
 		panelX := 5
-		s.shopNameRect = &util.Rect{
+		s.shopNameRect = &util.Rect[int]{
 			Left:   panelX,
 			Top:    panelY,
 			Right:  panelX + panelWidth,
@@ -70,7 +71,7 @@ func (s *Store) Update(data *gamestatus.GameData) {
 		panelY = 5 + s.shopNameRect.Bottom
 		panelWidth = int(float32(data.LayoutWidth) * 0.25)
 		panelX = s.shopNameRect.Left
-		s.baseCommandRect = &util.Rect{
+		s.baseCommandRect = &util.Rect[int]{
 			Left:   panelX,
 			Top:    panelY,
 			Right:  panelX + panelWidth,
@@ -82,7 +83,7 @@ func (s *Store) Update(data *gamestatus.GameData) {
 		panelY = s.baseCommandRect.Top
 		panelWidth = int(float32(data.LayoutWidth) * 0.6)
 		panelX = s.baseCommandRect.Right + 5
-		s.itemsRect = &util.Rect{
+		s.itemsRect = &util.Rect[int]{
 			Left:   panelX,
 			Top:    panelY,
 			Right:  panelX + panelWidth,

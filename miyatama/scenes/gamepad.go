@@ -32,10 +32,10 @@ type GamePad struct {
 	calcPanelRectWidth  int
 	gamepadBackground   color.Color
 	gamepadImages       []*ebiten.Image
-	basePanelRect       *util.Rect
-	gamepadRect         *util.Rect
-	aButtonRect         *util.Rect
-	bButtonRect         *util.Rect
+	basePanelRect       *util.Rect[int]
+	gamepadRect         *util.Rect[int]
+	aButtonRect         *util.Rect[int]
+	bButtonRect         *util.Rect[int]
 	gamepadScale        float64
 	buttonScale         float64
 }
@@ -121,7 +121,7 @@ func (g *GamePad) Update(data *gamestatus.GameData) {
 		panelWidth := int(float32(data.LayoutWidth) * 0.9)
 		panelX := (data.LayoutWidth - panelWidth) / 2
 		g.basePanelRect =
-			&util.Rect{
+			&util.Rect[int]{
 				Left:   panelX,
 				Top:    panelY,
 				Right:  panelX + panelWidth,
@@ -136,7 +136,7 @@ func (g *GamePad) Update(data *gamestatus.GameData) {
 		gamepadY := g.basePanelRect.Top + paddingWidth
 		gamepadX := g.basePanelRect.Left + paddingWidth
 		g.gamepadRect =
-			&util.Rect{
+			&util.Rect[int]{
 				Left:   gamepadX,
 				Top:    gamepadY,
 				Right:  gamepadX + gamepadWidth,
@@ -152,7 +152,7 @@ func (g *GamePad) Update(data *gamestatus.GameData) {
 		// A Button layout
 		buttonX := g.basePanelRect.Right - paddingWidth - buttonWidth
 		g.aButtonRect =
-			&util.Rect{
+			&util.Rect[int]{
 				Left:   buttonX,
 				Top:    buttonY,
 				Right:  buttonX + buttonWidth,
@@ -162,7 +162,7 @@ func (g *GamePad) Update(data *gamestatus.GameData) {
 		// B Button layout
 		buttonX = g.aButtonRect.Left - 5 - buttonWidth
 		g.bButtonRect =
-			&util.Rect{
+			&util.Rect[int]{
 				Left:   buttonX,
 				Top:    buttonY,
 				Right:  buttonX + buttonWidth,
@@ -273,6 +273,6 @@ func (g *GamePad) Draw(screen *ebiten.Image, data *gamestatus.GameData) {
 	screen.DrawImage(g.gamepadImages[GAME_PAD_IMAGE_B_BUTTON_OFF], op)
 }
 
-func (g *GamePad) GetPadRect() *util.Rect {
+func (g *GamePad) GetPadRect() *util.Rect[int] {
 	return g.gamepadRect
 }

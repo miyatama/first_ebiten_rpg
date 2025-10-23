@@ -442,7 +442,7 @@ func (t *TitleScene) generateMobCharacter() []*MobCharacter {
 				Y: 20,
 			},
 			Direction: util.DIRECTION_DOWN,
-			EventId:   0,
+			EventId:   4,
 		},
 		&MobCharacter{
 			MobType: MOB_TYPE_NONE,
@@ -506,6 +506,13 @@ func (t *TitleScene) generateEvents() []*gamestatus.Event {
 			TalkTexts:   []string{},
 			NextEventId: -1,
 			EventTag:    gamestatus.EVENT_TAG_CHANGE_TO_HOUSE_SCENE,
+		},
+		&gamestatus.Event{
+			Id:          4,
+			EventType:   gamestatus.EVENT_TYPE_MOB_TALK,
+			TalkTexts:   []string{"シャー！\nシャー！\nシャー！"},
+			NextEventId: -1,
+			StoreId:     -1,
 		},
 	}
 }
