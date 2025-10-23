@@ -92,11 +92,10 @@ func (s *Store) Update(data *gamestatus.GameData) {
 		s.calcPanelRectHeight = data.LayoutHeight
 		s.calcPanelRectWidth = data.LayoutWidth
 
-		// TODO 高さに応じてフォントサイズを変更
 		s.font = &text.GoTextFace{
 			Source:    japaneseFaceSource,
 			Direction: text.DirectionLeftToRight,
-			Size:      12,
+			Size:      data.TextSizeSmall,
 			Language:  language.Japanese,
 		}
 	}
@@ -106,7 +105,7 @@ func (s *Store) Draw(screen *ebiten.Image, data *gamestatus.GameData) {
 	if s.calcPanelRectHeight != data.LayoutHeight || s.calcPanelRectWidth != data.LayoutWidth {
 		return
 	}
-	const lineSpacing = 48
+	lineSpacing := data.TextSizeSmall * 1.2
 
 	// 店名(左上)
 	rect := s.shopNameRect

@@ -60,21 +60,30 @@ func (t *TalkPanel) Update(data *gamestatus.GameData, gamepadRect *util.Rect) {
 		t.calcPanelRectWidth = data.LayoutWidth
 
 		// 高さに応じてフォントサイズを変更
+		slog.Info("TalkPanel.Update()",
+			slog.Float64("font size", data.TextSizeMiddle))
 		t.font = &text.GoTextFace{
 			Source:    japaneseFaceSource,
 			Direction: text.DirectionLeftToRight,
-			Size:      12,
+			Size:      data.TextSizeMiddle,
 			Language:  language.Japanese,
 		}
 	}
 }
 
 func (t *TalkPanel) Draw(screen *ebiten.Image, data *gamestatus.GameData) {
-	vector.DrawFilledRect(screen, float32(t.rect.Left), float32(t.rect.Top), float32(t.rect.Width()), float32(t.rect.Height()), t.background, false)
+	vector.DrawFilledRect(
+		screen,
+		float32(t.rect.Left),
+		float32(t.rect.Top),
+		float32(t.rect.Width()),
+		float32(t.rect.Height()),
+		t.background,
+		false,
+	)
 	op := &text.DrawOptions{}
 	op.GeoM.Translate(float64(t.rect.Left+5), float64(t.rect.Top+5))
-	const lineSpacing = 48
-	op.LineSpacing = lineSpacing
+	op.LineSpacing = data.TextSizeMiddle * 1.2
 	text.Draw(screen, t.Text, t.font, op)
 }
 

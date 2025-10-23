@@ -1,6 +1,7 @@
 package miyatama
 
 import (
+	"bytes"
 	"fmt"
 	"log/slog"
 	"runtime"
@@ -8,8 +9,11 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/audio"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
+	"github.com/hajimehoshi/ebiten/v2/text/v2"
+	"golang.org/x/text/language"
 
 	miyatamaAudio "first_rpg/miyatama/assets/audio"
+	"first_rpg/miyatama/assets/fonts"
 	gamestatus "first_rpg/miyatama/game_status"
 	"first_rpg/miyatama/scenes"
 	"first_rpg/miyatama/util"
@@ -94,16 +98,66 @@ func (g *Game) Draw(screen *ebiten.Image) {
 }
 
 func (g *Game) Layout(outsideWidth, outsideHeight int) (int, int) {
-	if g.gameData.ScreenWidth != outsideWidth || g.gameData.ScreenHeight != outsideHeight {
-		slog.Info("Game.Layout()",
-			slog.String("outside rect", fmt.Sprintf("{width: %d, height: %d}", outsideWidth, outsideHeight)),
-		)
+	if g.gameData.ScreenWidth == outsideWidth && g.gameData.ScreenHeight == outsideHeight {
+		return g.gameData.LayoutWidth, g.gameData.LayoutHeight
 	}
+
+	slog.Info("Game.Layout()",
+		slog.String("outside rect", fmt.Sprintf("{width: %d, height: %d}", outsideWidth, outsideHeight)),
+	)
 
 	g.gameData.ScreenWidth = outsideWidth
 	g.gameData.ScreenHeight = outsideHeight
 	g.gameData.LayoutWidth = outsideWidth
 	g.gameData.LayoutHeight = outsideHeight
+
+	// デバイスの縦型横型に合わせてテキストサイズを決定
+	japaneseFaceSource, err := text.NewGoTextFaceSource(bytes.NewReader(fonts.MPlus1pRegular_ttf))
+	if err != nil {
+		slog.Error("Store.Init",
+			slog.String("TextFaceSource loading error", err.Error()),
+		)
+	}
+	font := &text.GoTextFace{
+		Source:    japaneseFaceSource,
+		Direction: text.DirectionLeftToRight,
+		Size:      12,
+		Language:  language.Japanese,
+	}
+	messagePanelWidth := 0
+	if outsideHeight > outsideWidth {
+		// (padding(5px) + border(5px) + margin(5px)) * 2 = 30
+		messagePanelWidth = outsideWidth - 30
+	} else {
+		// 横幅の8割 - (border(5px) + mergin(5px)) * 2
+		messagePanelWidth = int(float32(outsideWidth)*0.8) - 20
+	}
+	largeSize, err := getTextSize("０１２３４０１２３４", float64(messagePanelWidth), font)
+	if err != nil {
+		slog.Error("Game.Layout() get large text font size",
+			slog.String("error", err.Error()),
+		)
+	}
+	g.gameData.TextSizeLarge = largeSize
+	middleSize, err := getTextSize("０１２３４０１２３４０１２３４０１２３４", float64(messagePanelWidth), font)
+	if err != nil {
+		slog.Error("Game.Layout() get middle text font size",
+			slog.String("error", err.Error()),
+		)
+	}
+	g.gameData.TextSizeMiddle = middleSize
+	smallSize, err := getTextSize("０１２３４０１２３４０１２３４０１２３４０１２３４０１２３４０１２３４０１２３４", float64(messagePanelWidth), font)
+	if err != nil {
+		slog.Error("Game.Layout() get small text font size",
+			slog.String("error", err.Error()),
+		)
+	}
+	g.gameData.TextSizeSmall = smallSize
+	slog.Info("Game.Layout()",
+		slog.Int("messagePanelWidth", messagePanelWidth),
+		slog.String("text size", fmt.Sprintf("{large: %f, middle: %f, small: %f}", largeSize, middleSize, smallSize)),
+	)
+
 	return g.gameData.LayoutWidth, g.gameData.LayoutHeight
 }
 
@@ -130,4 +184,22 @@ func (g *Game) RegisterWorkDir(path string) {
 		slog.String("path", path),
 	)
 	g.gameData.Environemnt.WorkDirPath = path
+}
+
+func getTextSize(sampleText string, panelWidth float64, font *text.GoTextFace) (float64, error) {
+	for i := 100; i > 0; i-- {
+		size := float64(i)
+		font.Size = size
+		lineSpacing := size * 1.2
+		w, _ := text.Measure(sampleText, font, lineSpacing)
+		slog.Info("Game.Layout() get text size",
+			slog.String("text", sampleText),
+			slog.Float64("font size", size),
+			slog.Float64("width", w),
+		)
+		if w <= panelWidth {
+			return size, nil
+		}
+	}
+	return 0, fmt.Errorf("text size not found")
 }
