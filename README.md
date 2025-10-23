@@ -25,6 +25,13 @@ ebitengineでRPG実装できるかのチャレンジ
   +  ループ再生
   +  シーン切り替わりで停止
 + ~~文字の大きさをスクリーンサイズによって変動させる~~
++ ~~FPS表示~~
++ Androidで遅いのなんとかする
++ パッケージ構成を変える
+  + ui
+  + usecase
+  + domain
+  + infra
 
 ## for Android
 

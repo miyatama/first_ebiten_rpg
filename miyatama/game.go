@@ -8,6 +8,7 @@ import (
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/audio"
+	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	"github.com/hajimehoshi/ebiten/v2/text/v2"
 	"golang.org/x/text/language"
@@ -95,6 +96,8 @@ func keyToUserAction(keys []ebiten.Key) gamestatus.UserAction {
 
 func (g *Game) Draw(screen *ebiten.Image) {
 	g.scene.Draw(screen, &g.gameData)
+	ebitenutil.DebugPrint(screen, fmt.Sprintf("FPS: %.2f", ebiten.ActualFPS()))
+
 }
 
 func (g *Game) Layout(outsideWidth, outsideHeight int) (int, int) {
