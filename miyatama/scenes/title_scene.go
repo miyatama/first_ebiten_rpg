@@ -9,6 +9,7 @@ import (
 	gamestatus "first_rpg/miyatama/game_status"
 	"first_rpg/miyatama/util"
 	"log/slog"
+	"time"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/audio"
@@ -134,6 +135,10 @@ func (t *TitleScene) Init(data *gamestatus.GameData) error {
 
 func (t *TitleScene) Update(data *gamestatus.GameData) {
 	t.gamepad.Update(data)
+	if !t.audioPlayer.IsPlaying() {
+		t.audioPlayer.SetPosition(time.Duration(0))
+		t.audioPlayer.Play()
+	}
 
 	// キャラクタの移動
 	switch t.sceneStatus {
@@ -209,6 +214,7 @@ func (t *TitleScene) Update(data *gamestatus.GameData) {
 	case TITLE_SCENE_CHANGE_SCENE:
 		{
 			if t.sceneSwitcher.IsIdle() {
+				t.audioPlayer.Close()
 				t.gameStateMsg = gamestatus.GAME_STATE_MSG_HOUSE
 			}
 		}
