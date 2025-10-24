@@ -13,11 +13,11 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/text/v2"
 	"golang.org/x/text/language"
 
-	miyatamaAudio "first_rpg/miyatama/assets/audio"
-	"first_rpg/miyatama/assets/fonts"
-	gamestatus "first_rpg/miyatama/game_status"
-	"first_rpg/miyatama/scenes"
-	"first_rpg/miyatama/util"
+	miyatamaAudio "first_rpg/miyatama/ui/assets/audio"
+	"first_rpg/miyatama/ui/assets/fonts"
+	gamestatus "first_rpg/miyatama/ui/game_status"
+	"first_rpg/miyatama/ui/scenes"
+	"first_rpg/miyatama/ui/util"
 )
 
 type Game struct {
@@ -90,6 +90,8 @@ func keyToUserAction(keys []ebiten.Key) gamestatus.UserAction {
 		return gamestatus.USER_ACTION_RIGHT
 	case ebiten.KeySpace:
 		return gamestatus.USER_ACTION_DECIDE
+	case ebiten.KeyEscape:
+		return gamestatus.USER_ACTION_CANCEL
 	}
 	return gamestatus.USER_ACTION_NONE
 }
@@ -190,11 +192,13 @@ func (g *Game) RegisterMobileInterface(
 	ouptutDebug func(string),
 	ouptutInfo func(string),
 	ouptutError func(string),
+	selectImportPhotos func(),
 ) {
 	g.mobileInterface = gamestatus.MobileInterface{
-		OutputDebugLog: ouptutDebug,
-		OutputInfoLog:  ouptutInfo,
-		OutputErrorLog: ouptutError,
+		OutputDebugLog:     ouptutDebug,
+		OutputInfoLog:      ouptutInfo,
+		OutputErrorLog:     ouptutError,
+		SelectImportPhotos: selectImportPhotos,
 	}
 }
 
@@ -211,17 +215,26 @@ func (g *Game) RegisterWorkDir(path string) {
 	g.gameData.Environemnt.WorkDirPath = path
 }
 
+func (g *Game) ImportPhotos(paths *StringArray) {
+	for i := 0; i < paths.Size(); i++ {
+		slog.Info("Game.ImportPhotos()",
+			slog.String("path", paths.Get(i)),
+		)
+	}
+}
+
+func (g *Game) ImportPhoto(path string) {
+	slog.Info("Game.ImportPhoto()",
+		slog.String("path", path),
+	)
+}
+
 func getTextSize(sampleText string, panelWidth float64, font *text.GoTextFace) (float64, error) {
 	for i := 100; i > 0; i-- {
 		size := float64(i)
 		font.Size = size
 		lineSpacing := size * 1.2
 		w, _ := text.Measure(sampleText, font, lineSpacing)
-		slog.Info("Game.Layout() get text size",
-			slog.String("text", sampleText),
-			slog.Float64("font size", size),
-			slog.Float64("width", w),
-		)
 		if w <= panelWidth {
 			return size, nil
 		}

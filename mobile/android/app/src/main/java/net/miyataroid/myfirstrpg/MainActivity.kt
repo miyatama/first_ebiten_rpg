@@ -14,7 +14,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.coroutineScope
-import com.miyatama.game_main.mobile.AppLoggerCallback
+import com.miyatama.game_main.mobile.MobileIface
 import com.miyatama.game_main.mobile.Mobile
 import go.Seq
 import kotlinx.coroutines.delay
@@ -56,7 +56,7 @@ class MainActivity : ComponentActivity() {
                 return false
             }
 
-            Mobile.registerMobileInterface(object: AppLoggerCallback {
+            Mobile.registerMobileInterface(object: MobileIface{
                 override fun outputDebugLog(text: String) {
                     Log.d("measurement", text)
                 }
@@ -66,6 +66,10 @@ class MainActivity : ComponentActivity() {
                 override fun outputErrorLog(text: String) {
                     Log.e("measurement", text)
                 }
+                override fun selectImportPhotos() {
+                    Log.d("measurement", "selectImportPhotos")
+                    setImportPhotos()
+                }
 
             })
             return true
@@ -74,6 +78,7 @@ class MainActivity : ComponentActivity() {
         fun setWorkDir() {
             Mobile.registerWorkDir(getApplicationContext().filesDir.getPath())
         }
+
 
         lifecycle.coroutineScope.launch {
             while(!setListener()) {
@@ -95,6 +100,11 @@ class MainActivity : ComponentActivity() {
         if (this::ebitenView.isInitialized) {
             ebitenView.resumeGame()
         }
+    }
+
+    fun setImportPhotos() {
+        Mobile.importPhoto("test.jpg")
+        // Mobile.ImportPhotos(listOf("test.jpg", "test2.jpg"))
     }
 }
 

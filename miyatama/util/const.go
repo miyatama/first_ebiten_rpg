@@ -1,7 +1,0 @@
-package util
-
-const (
-	CHARACTER_IMG_WIDTH      = 32
-	CHARACTER_IMG_HEIGTH     = 32
-	CHARACTER_ANIMATION_SPAN = 15
-)

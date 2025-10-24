@@ -23,17 +23,19 @@ func init() {
 	mobile.SetGame(g)
 }
 
-type AppLoggerCallback interface {
+type MobileIface interface {
 	OutputDebugLog(text string)
 	OutputInfoLog(text string)
 	OutputErrorLog(text string)
+	SelectImportPhotos()
 }
 
-func RegisterMobileInterface(callback AppLoggerCallback) {
+func RegisterMobileInterface(callback MobileIface) {
 	game.RegisterMobileInterface(
 		func(text string) { callback.OutputDebugLog(text) },
 		func(text string) { callback.OutputInfoLog(text) },
 		func(text string) { callback.OutputErrorLog(text) },
+		func() { callback.SelectImportPhotos() },
 	)
 }
 
@@ -42,5 +44,17 @@ func IsInitializedGame() bool {
 }
 
 func RegisterWorkDir(path string) {
+	game.RegisterWorkDir(path)
+}
+
+func ImportPhotos(paths *miyatama.StringArray) {
+	game.ImportPhotos(paths)
+}
+
+func ImportPhoto(path string) {
+	game.ImportPhoto(path)
+}
+
+func RegisterWorkDir2(path string) {
 	game.RegisterWorkDir(path)
 }
